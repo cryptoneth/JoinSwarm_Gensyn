@@ -108,11 +108,12 @@ done
 echo "Login detected! userdata.json created."
 
 # Automate answers to questions inside screen
-# Assuming typical questions; adjust based on exact prompts if known
-# For example:
-screen -S swarm -X stuff "n\n"  # e.g., no to Hugging Face
-screen -S swarm -X stuff "y\n"  # yes to proceed
-# Add more as needed for complete automation
+# First, no to Hugging Face push
+screen -S swarm -X stuff "n\n"
+# Then, enter model name: Gensyn/Qwen2.5-0.5B-Instruct
+screen -S swarm -X stuff "Gensyn/Qwen2.5-0.5B-Instruct\n"
+# Add more if needed, e.g., y for proceed
+screen -S swarm -X stuff "y\n"
 
 # Wait for installation to complete (adjust time as needed)
 sleep 60
