@@ -29,12 +29,19 @@ if [ "$choice" != "1" ] && [ "$choice" != "2" ]; then
     exit 1
 fi
 
-# Close any existing swarm screen session
+# Robust cleanup of any existing swarm screen session
 echo "Checking for existing swarm screen session..."
+screen -wipe  # Wipe detached sessions
 if screen -list | grep -q "swarm"; then
     echo "Existing swarm session found. Closing it..."
     screen -S swarm -X quit
     sleep 2
+    # Force kill if still exists
+    if screen -list | grep -q "swarm"; then
+        echo "Force killing remaining swarm session..."
+        pkill -f "SCREEN -S swarm"
+        sleep 2
+    fi
 fi
 
 if [ "$choice" = "1" ]; then
@@ -129,11 +136,18 @@ fi
 # Common part: Run docker inside screen
 screen -S swarm -X stuff "docker compose run --rm --build -Pit swarm-cpu\n"
 
-# Wait for Docker to build and server to start listening on port 3000
+# Wait for Docker to build and server to start listening on port 3000 with timeout
 echo "Please wait... Docker is building and installing. This may take a few minutes until the server is ready for login."
+timeout=30  # 5 minutes timeout (300 seconds / 10)
+counter=0
 while ! ss -tlnp | grep -q :3000; do
-    echo "Checking... Server not ready yet. Please wait..."
+    if [ $counter -ge $timeout ]; then
+        echo "Timeout reached. Server not ready. Check screen logs: screen -r swarm"
+        exit 1
+    fi
+    echo "Checking... Server not ready yet. Please wait... ($((counter * 10))s elapsed)"
     sleep 10
+    counter=$((counter + 1))
 done
 echo "Server ready! Now setting up the tunnel."
 
