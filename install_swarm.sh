@@ -44,14 +44,16 @@ if screen -list | grep -q "swarm"; then
     fi
 fi
 
+SWARM_DIR="/root/rl-swarm"
+
 if [ "$choice" = "1" ]; then
     echo "Starting new install. Cleaning up previous files..."
     # Clean up rl-swarm directory if exists - ensure it's fully removed
-    if [ -d "rl-swarm" ]; then
+    if [ -d "$SWARM_DIR" ]; then
         echo "Removing previous rl-swarm directory..."
-        rm -rf rl-swarm
+        rm -rf "$SWARM_DIR"
         # Double-check removal
-        if [ -d "rl-swarm" ]; then
+        if [ -d "$SWARM_DIR" ]; then
             echo "Warning: rl-swarm directory still exists after removal attempt."
         else
             echo "rl-swarm directory removed successfully."
@@ -86,10 +88,11 @@ if [ "$choice" = "1" ]; then
     sudo systemctl start docker
     sudo systemctl enable docker
 
-    # Step 2: Clone Repository
+    # Step 2: Clone Repository in /root
     echo "Cloning repository..."
+    cd /root
     git clone https://github.com/gensyn-ai/rl-swarm/
-    cd rl-swarm || exit
+    cd "$SWARM_DIR" || exit
 
     # Create screen session
     echo "Creating screen session 'swarm'..."
@@ -102,24 +105,21 @@ if [ "$choice" = "1" ]; then
 
     # Automatically edit the config file using sed
     echo "Editing config file automatically..."
-    config_file="/root/rl-swarm/rgym_exp/config/rg-swarm.yaml"
+    config_file="$SWARM_DIR/rgym_exp/config/rg-swarm.yaml"
     if [ -f "$config_file" ]; then
         sed -i 's/num_train_samples: .*/num_train_samples: 1/' "$config_file"
         sed -i 's/startup_timeout: .*/startup_timeout: 180/' "$config_file"
     else
-        # If file not in /root, assume current dir
-        config_file="$(pwd)/rgym_exp/config/rg-swarm.yaml"
-        sed -i 's/num_train_samples: .*/num_train_samples: 1/' "$config_file"
-        sed -i 's/startup_timeout: .*/startup_timeout: 180/' "$config_file"
+        echo "Config file not found, skipping edit."
     fi
 
 else
     echo "Restarting stopped install..."
-    if [ ! -d "rl-swarm" ]; then
+    if [ ! -d "$SWARM_DIR" ]; then
         echo "rl-swarm directory not found. Please run new install first."
         exit 1
     fi
-    cd rl-swarm || exit
+    cd "$SWARM_DIR" || exit
 
     # Create screen session
     echo "Creating screen session 'swarm'..."
@@ -203,14 +203,14 @@ wait_for_prompt() {
         screen -S swarm -X stuff "$response\n"
       fi
       # Wait a bit for the input to be processed
-      sleep 3
+      sleep 1
       break
     fi
     if [ $wait_counter -ge $wait_timeout ]; then
       echo "Timeout for prompt: $user_prompt. Continuing anyway."
       break
     fi
-    sleep 2
+    sleep 1  # Reduced sleep for more responsive checking
     wait_counter=$((wait_counter + 1))
   done
 }
@@ -244,8 +244,8 @@ echo "Node ready! Displaying information."
 
 # Display userdata.json and node info
 echo "Installation complete."
-echo "Userdata.json content:"
-cat "$(pwd)/userdata.json"
+echo "UserData.json content:"
+cat "$SWARM_DIR/user/modal-login/userData.json"
 
 # Capture node info from screen log
 tail -n 100 /tmp/swarm.log > node_info.txt
