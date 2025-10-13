@@ -54,14 +54,17 @@ Stop: Attach and press Ctrl + C (use cautiously)
 
 Video : 
 
+
+
+```bash
+
+bash <(curl -sL https://raw.githubusercontent.com/CodeDialect/gswarm-role/main/gswarm.sh)
+
+```
+
 Gensyn Dashboard : https://dashboard.gensyn.ai/
 
 Write Your EOA
-
-```bash
-chmod +x gensynrole.sh && ./gensynrole.sh
-
-```
 
 
 # Enjoy Being SWARM, gSWARM
