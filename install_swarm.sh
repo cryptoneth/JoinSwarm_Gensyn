@@ -136,6 +136,10 @@ fi
 # Common part: Run docker inside screen
 screen -S swarm -X stuff "docker compose run --rm --build -Pit swarm-cpu\n"
 
+# Enable logging for screen to monitor output
+screen -S swarm -X logfile /tmp/swarm.log
+screen -S swarm -X log
+
 # Wait for Docker to build and server to start listening on port 3000 with timeout
 echo "Please wait... Docker is building and installing. This may take a few minutes until the server is ready for login."
 timeout=30  # 5 minutes timeout (300 seconds / 10)
@@ -180,24 +184,54 @@ while [ ! -f "$(pwd)/userdata.json" ]; do
 done
 echo "Login detected! userdata.json created."
 
-# Automate answers to questions inside screen
-# First, no to Hugging Face push
-screen -S swarm -X stuff "n\n"
-# Then, enter model name: Gensyn/Qwen2.5-0.5B-Instruct
-screen -S swarm -X stuff "Gensyn/Qwen2.5-0.5B-Instruct\n"
-# Add more if needed, e.g., y for proceed
-screen -S swarm -X stuff "y\n"
+# Function to wait for a specific prompt in screen log and get user input
+wait_for_prompt() {
+  local prompt_pattern="$1"
+  local user_prompt="$2"
+  local response
+  echo "Waiting for prompt: $user_prompt"
+  while true; do
+    if tail -n 50 /tmp/swarm.log | grep -q "$prompt_pattern"; then
+      echo "$user_prompt"
+      read -p "Enter your response (press Enter for default): " response
+      if [ -z "$response" ]; then
+        screen -S swarm -X stuff "\n"
+      else
+        screen -S swarm -X stuff "$response\n"
+      fi
+      break
+    fi
+    sleep 2
+  done
+}
 
-# Wait for installation to complete (adjust time as needed)
-sleep 60
+# Handle interactive prompts after login
+echo "Login complete. Handling interactive prompts..."
+
+# First prompt: Hugging Face push
+wait_for_prompt "push models you train in the RL swarm to the Hugging Face Hub" ">> Would you like to push models to Hugging Face Hub? [y/N]"
+
+# Second prompt: Model name
+wait_for_prompt "Enter the name of the model you want to use in huggingface repo/name format" ">> Enter model name (or Enter for default):"
+
+# Third prompt: AI Prediction Market
+wait_for_prompt "your model to participate in the AI Prediction Market" ">> Participate in AI Prediction Market? [Y/n]"
+
+# Wait for node to be fully ready by checking for Hello line in log
+echo "Waiting for node to be fully ready..."
+while ! tail -n 100 /tmp/swarm.log | grep -q '🐱 Hello 🐈 \[.*\] 🦮 \[.*\]!'; do
+    echo "Node not ready yet. Waiting..."
+    sleep 10
+done
+echo "Node ready! Displaying information."
 
 # Display userdata.json and node info
 echo "Installation complete."
 echo "Userdata.json content:"
 cat "$(pwd)/userdata.json"
 
-# Capture node info from screen
-screen -S swarm -X hardcopy node_info.txt
+# Capture node info from screen log
+tail -n 100 /tmp/swarm.log > node_info.txt
 
 # Extract and display the specific Hello line
 hello_line=$(grep -o '🐱 Hello 🐈 \[.*\] 🦮 \[.*\]!' node_info.txt | tail -1)
@@ -206,7 +240,7 @@ if [ -n "$hello_line" ]; then
     echo "$hello_line"
 else
     echo "Node Hello Info not found. Check screen manually."
-    cat node_info.txt
+    tail -n 50 node_info.txt
 fi
 
 echo "You can manage the screen session with: screen -r swarm"
