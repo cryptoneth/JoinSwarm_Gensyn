@@ -16,6 +16,11 @@ Video :
 Run these commands to ensure your packages are up to date:
 
 ```bash
+
+cd
+
+rm -r JoinSwarm_Gensyn
+
 sudo apt update && sudo apt upgrade -y
 
 sudo apt install git -y
