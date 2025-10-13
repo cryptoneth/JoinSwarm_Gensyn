@@ -22,38 +22,12 @@ if [ "$follow" != "y" ] && [ "$follow" != "Y" ]; then
     exit 1
 fi
 
-# Step 1: Install Dependencies
-echo "Installing dependencies..."
-sudo apt update && sudo apt upgrade -y
-sudo apt install screen curl iptables build-essential git wget lz4 jq make gcc nano automake autoconf tmux htop nvme-cli libgbm1 pkg-config libssl-dev libleveldb-dev tar clang bsdmainutils ncdu unzip libleveldb-dev -y
-sudo apt install python3 python3-pip python3-venv python3-dev -y
-sudo apt update
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
-sudo apt install -y nodejs
-node -v
-npm install -g yarn
-yarn -v
-curl -o- -L https://yarnpkg.com/install.sh | bash
-export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
-source ~/.bashrc
-
-# Install Docker before creating screen
-echo "Installing Docker..."
-sudo apt-get update
-sudo apt-get install ca-certificates curl gnupg lsb-release -y
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Step 2: Clone Repository
-echo "Cloning repository..."
-git clone https://github.com/gensyn-ai/rl-swarm/
-cd rl-swarm || exit
+# Ask for new install or restart
+read -p "New install or restart stopped one? (1 for new, 2 for restart): " choice
+if [ "$choice" != "1" ] && [ "$choice" != "2" ]; then
+    echo "Invalid choice. Please enter 1 or 2."
+    exit 1
+fi
 
 # Close any existing swarm screen session
 echo "Checking for existing swarm screen session..."
@@ -63,44 +37,106 @@ if screen -list | grep -q "swarm"; then
     sleep 2
 fi
 
-# Create screen session
-echo "Creating screen session 'swarm'..."
-screen -dmS swarm
+if [ "$choice" = "1" ]; then
+    echo "Starting new install. Cleaning up previous files..."
+    # Clean up rl-swarm directory if exists
+    if [ -d "rl-swarm" ]; then
+        rm -rf rl-swarm
+    fi
 
-# Execute commands inside screen
-screen -S swarm -X stuff "cd $(pwd)\n"
-screen -S swarm -X stuff "python3 -m venv .venv\n"
-screen -S swarm -X stuff "source .venv/bin/activate || . .venv/bin/activate\n"
+    # Step 1: Install Dependencies
+    echo "Installing dependencies..."
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install screen curl iptables build-essential git wget lz4 jq make gcc nano automake autoconf tmux htop nvme-cli libgbm1 pkg-config libssl-dev libleveldb-dev tar clang bsdmainutils ncdu unzip libleveldb-dev -y
+    sudo apt install python3 python3-pip python3-venv python3-dev -y
+    sudo apt update
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+    sudo apt install -y nodejs
+    node -v
+    npm install -g yarn
+    yarn -v
+    curl -o- -L https://yarnpkg.com/install.sh | bash
+    export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+    source ~/.bashrc
 
-# Automatically edit the config file using sed
-echo "Editing config file automatically..."
-config_file="/root/rl-swarm/rgym_exp/config/rg-swarm.yaml"
-if [ -f "$config_file" ]; then
-    sed -i 's/num_train_samples: .*/num_train_samples: 1/' "$config_file"
-    sed -i 's/startup_timeout: .*/startup_timeout: 180/' "$config_file"
+    # Install Docker
+    echo "Installing Docker..."
+    sudo apt-get update
+    sudo apt-get install ca-certificates curl gnupg lsb-release -y
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+    sudo systemctl start docker
+    sudo systemctl enable docker
+
+    # Step 2: Clone Repository
+    echo "Cloning repository..."
+    git clone https://github.com/gensyn-ai/rl-swarm/
+    cd rl-swarm || exit
+
+    # Create screen session
+    echo "Creating screen session 'swarm'..."
+    screen -dmS swarm
+
+    # Execute commands inside screen
+    screen -S swarm -X stuff "cd $(pwd)\n"
+    screen -S swarm -X stuff "python3 -m venv .venv\n"
+    screen -S swarm -X stuff "source .venv/bin/activate || . .venv/bin/activate\n"
+
+    # Automatically edit the config file using sed
+    echo "Editing config file automatically..."
+    config_file="/root/rl-swarm/rgym_exp/config/rg-swarm.yaml"
+    if [ -f "$config_file" ]; then
+        sed -i 's/num_train_samples: .*/num_train_samples: 1/' "$config_file"
+        sed -i 's/startup_timeout: .*/startup_timeout: 180/' "$config_file"
+    else
+        # If file not in /root, assume current dir
+        config_file="$(pwd)/rgym_exp/config/rg-swarm.yaml"
+        sed -i 's/num_train_samples: .*/num_train_samples: 1/' "$config_file"
+        sed -i 's/startup_timeout: .*/startup_timeout: 180/' "$config_file"
+    fi
+
 else
-    # If file not in /root, assume current dir
-    config_file="$(pwd)/rgym_exp/config/rg-swarm.yaml"
-    sed -i 's/num_train_samples: .*/num_train_samples: 1/' "$config_file"
-    sed -i 's/startup_timeout: .*/startup_timeout: 180/' "$config_file"
+    echo "Restarting stopped install..."
+    if [ ! -d "rl-swarm" ]; then
+        echo "rl-swarm directory not found. Please run new install first."
+        exit 1
+    fi
+    cd rl-swarm || exit
+
+    # Create screen session
+    echo "Creating screen session 'swarm'..."
+    screen -dmS swarm
+
+    # Execute commands inside screen (activate venv)
+    screen -S swarm -X stuff "cd $(pwd)\n"
+    screen -S swarm -X stuff "source .venv/bin/activate || . .venv/bin/activate\n"
+
+    # No need to edit config again, assuming it's already done
+
 fi
 
-# Run docker inside screen
+# Common part: Run docker inside screen
 screen -S swarm -X stuff "docker compose run --rm --build -Pit swarm-cpu\n"
 
 # Wait for Docker to build and server to start listening on port 3000
-echo "منتظر بمونید... Docker در حال build و نصب است. این ممکن است چند دقیقه طول بکشد تا سرور آماده لاگین شود."
+echo "Please wait... Docker is building and installing. This may take a few minutes until the server is ready for login."
 while ! ss -tlnp | grep -q :3000; do
-    echo "در حال چک کردن... سرور هنوز آماده نیست. منتظر بمانید..."
+    echo "Checking... Server not ready yet. Please wait..."
     sleep 10
 done
-echo "سرور آماده شد! حالا tunnel را راه‌اندازی می‌کنیم."
+echo "Server ready! Now setting up the tunnel."
 
 # Now, outside screen, set up localtunnel
 echo "Setting up localtunnel..."
 
-# Install localtunnel
-sudo npm install -g localtunnel
+# Install localtunnel if not already
+if ! command -v lt &> /dev/null; then
+    sudo npm install -g localtunnel
+fi
 
 # Get password (VPS IP)
 password=$(curl https://loca.lt/mytunnelpassword)
