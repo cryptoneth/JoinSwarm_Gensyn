@@ -41,6 +41,9 @@ Stop: Attach and press Ctrl + C (use cautiously)
 
 Video : 
 
+Gensyn Dashboard : https://dashboard.gensyn.ai/
+
+Write Your EOA
 
 ```bash
 chmod +x gensynrole.sh && ./gensynrole.sh
