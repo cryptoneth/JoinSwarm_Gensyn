@@ -39,9 +39,16 @@ fi
 
 if [ "$choice" = "1" ]; then
     echo "Starting new install. Cleaning up previous files..."
-    # Clean up rl-swarm directory if exists
+    # Clean up rl-swarm directory if exists - ensure it's fully removed
     if [ -d "rl-swarm" ]; then
+        echo "Removing previous rl-swarm directory..."
         rm -rf rl-swarm
+        # Double-check removal
+        if [ -d "rl-swarm" ]; then
+            echo "Warning: rl-swarm directory still exists after removal attempt."
+        else
+            echo "rl-swarm directory removed successfully."
+        fi
     fi
 
     # Step 1: Install Dependencies
