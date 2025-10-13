@@ -177,12 +177,13 @@ url=$(grep -o 'https://[^ ]*' lt_output.log | head -1)
 echo "Your tunnel URL is: $url"
 echo "Go to this URL and login."
 
-# Wait for login to complete by checking for userdata.json
-echo "Waiting for login to complete..."
-while [ ! -f "$(pwd)/userdata.json" ]; do
-    sleep 10
-done
-echo "Login detected! userdata.json created."
+# Manual confirmation for login completion
+echo "Login complete? Press y to continue to interactive prompts: "
+read -p "Login done? (y): " login_done
+if [ "$login_done" != "y" ] && [ "$login_done" != "Y" ]; then
+    echo "Please login first and try again."
+    exit 1
+fi
 
 # Function to wait for a specific prompt in screen log and get user input
 wait_for_prompt() {
