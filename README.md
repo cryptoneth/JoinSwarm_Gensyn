@@ -10,6 +10,8 @@ This setup guide will help you join the Gensyn Swarm network using a one-click a
 
 ## Step-by-Step Installation
 
+Video :
+
 ### Update the System
 Run these commands to ensure your packages are up to date:
 
@@ -33,4 +35,17 @@ The process takes 10-30 minutes.Managing Your Swarm NodeAttach to the persistent
 Detach: Press Ctrl + A then D
 
 Stop: Attach and press Ctrl + C (use cautiously)
+
+
+#SwarmRole
+
+Video : 
+
+
+```bash
+chmod +x gensynrole.sh && ./gensynrole.sh
+
+```
+
+
 
