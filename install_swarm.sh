@@ -3,13 +3,12 @@
 # Display logo and title
 echo -e "\e[33m"
 cat << "EOF"
-   ___           _    _             _
-  / __\ __ __ _| | _| |_ ___  _ __| |_ ___  _ __
- / /  | '__/ _` | |/ / __/ _ \| '__| __/ _ \| '_ \
-/ /___| | | (_| |   <| || (_) | |  | || (_) | | | |
-\____/|_|  \__,_|_|\_\\__\___/|_|   \__\___/|_| |_|
-
-With Bee Logo: 🐝
+_________                        __                 
+\_   ___ \_______ ___.__._______/  |_  ____   ____  
+/    \  \/\_  __ <   |  |\____ \   __\/  _ \ /    \ 
+\     \____|  | \/\___  ||  |_> >  | (  <_> )   |  \
+ \______  /|__|   / ____||   __/|__|  \____/|___|  /
+        \/        \/     |__|                    \/
 EOF
 echo -e "\e[0m"
 
@@ -115,9 +114,18 @@ echo "Installation complete."
 echo "Userdata.json content:"
 cat "$(pwd)/userdata.json"
 
-# Capture node info from screen (assuming it's logged)
+# Capture node info from screen
 screen -S swarm -X hardcopy node_info.txt
-echo "Node info:"
-cat node_info.txt
+
+# Extract and display the specific Hello line
+hello_line=$(grep -o '🐱 Hello 🐈 \[.*\] 🦮 \[.*\]!' node_info.txt | tail -1)
+if [ -n "$hello_line" ]; then
+    echo "Node Hello Info:"
+    echo "$hello_line"
+else
+    echo "Node Hello Info not found. Check screen manually."
+    cat node_info.txt
+fi
 
 echo "You can manage the screen session with: screen -r swarm"
+echo "All done! Goodbye!"
