@@ -190,6 +190,8 @@ wait_for_prompt() {
   local prompt_pattern="$1"
   local user_prompt="$2"
   local response
+  local wait_timeout=60  # 2 minutes timeout for each prompt
+  local wait_counter=0
   echo "Waiting for prompt: $user_prompt"
   while true; do
     if tail -n 50 /tmp/swarm.log | grep -q "$prompt_pattern"; then
@@ -200,9 +202,16 @@ wait_for_prompt() {
       else
         screen -S swarm -X stuff "$response\n"
       fi
+      # Wait a bit for the input to be processed
+      sleep 3
+      break
+    fi
+    if [ $wait_counter -ge $wait_timeout ]; then
+      echo "Timeout for prompt: $user_prompt. Continuing anyway."
       break
     fi
     sleep 2
+    wait_counter=$((wait_counter + 1))
   done
 }
 
@@ -220,9 +229,16 @@ wait_for_prompt "your model to participate in the AI Prediction Market" ">> Part
 
 # Wait for node to be fully ready by checking for Hello line in log
 echo "Waiting for node to be fully ready..."
+node_timeout=60  # 10 minutes for node ready
+node_counter=0
 while ! tail -n 100 /tmp/swarm.log | grep -q '🐱 Hello 🐈 \[.*\] 🦮 \[.*\]!'; do
-    echo "Node not ready yet. Waiting..."
+    if [ $node_counter -ge $node_timeout ]; then
+        echo "Timeout waiting for node ready. Check screen: screen -r swarm"
+        break
+    fi
+    echo "Node not ready yet. Waiting... ($((node_counter * 10))s elapsed)"
     sleep 10
+    node_counter=$((node_counter + 1))
 done
 echo "Node ready! Displaying information."
 
