@@ -140,18 +140,10 @@ screen -S swarm -X stuff "docker compose run --rm --build -Pit swarm-cpu\n"
 screen -S swarm -X logfile /tmp/swarm.log
 screen -S swarm -X log
 
-# Wait for Docker to build and server to start listening on port 3000 with timeout
-echo "Please wait... Docker is building and installing. This may take a few minutes until the server is ready for login."
-timeout=30  # 5 minutes timeout (300 seconds / 10)
-counter=0
+# Wait for Docker to build and server to start listening on port 3000 without timeout
+echo "Please wait... Docker is building and installing. This may take several minutes until the server is ready for login."
 while ! ss -tlnp | grep -q :3000; do
-    if [ $counter -ge $timeout ]; then
-        echo "Timeout reached. Server not ready. Check screen logs: screen -r swarm"
-        exit 1
-    fi
-    echo "Checking... Server not ready yet. Please wait... ($((counter * 10))s elapsed)"
     sleep 10
-    counter=$((counter + 1))
 done
 echo "Server ready! Now setting up the tunnel."
 
