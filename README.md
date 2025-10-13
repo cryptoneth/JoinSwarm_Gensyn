@@ -10,7 +10,7 @@ This setup guide will help you join the Gensyn Swarm network using a one-click a
 
 ## Step-by-Step Installation
 
-Video :
+Video :  https://x.com/0xCrypton_/status/1977739674396524821
 
 ### Update the System
 Run these commands to ensure your packages are up to date:
@@ -52,7 +52,7 @@ Stop: Attach and press Ctrl + C (use cautiously)
 
 # SwarmRole
 
-Video : 
+Video : https://x.com/0xCrypton_/status/1977739674396524821
 
 
 
