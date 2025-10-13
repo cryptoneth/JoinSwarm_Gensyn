@@ -37,7 +37,7 @@ Detach: Press Ctrl + A then D
 Stop: Attach and press Ctrl + C (use cautiously)
 
 
-#SwarmRole
+# SwarmRole
 
 Video : 
 
@@ -48,5 +48,5 @@ chmod +x gensynrole.sh && ./gensynrole.sh
 ```
 
 
-#Enjoy Being SWARM, gSWARM
+# Enjoy Being SWARM, gSWARM
 
