@@ -55,6 +55,14 @@ echo "Cloning repository..."
 git clone https://github.com/gensyn-ai/rl-swarm/
 cd rl-swarm || exit
 
+# Close any existing swarm screen session
+echo "Checking for existing swarm screen session..."
+if screen -list | grep -q "swarm"; then
+    echo "Existing swarm session found. Closing it..."
+    screen -S swarm -X quit
+    sleep 2
+fi
+
 # Create screen session
 echo "Creating screen session 'swarm'..."
 screen -dmS swarm
@@ -79,6 +87,14 @@ fi
 
 # Run docker inside screen
 screen -S swarm -X stuff "docker compose run --rm --build -Pit swarm-cpu\n"
+
+# Wait for Docker to build and server to start listening on port 3000
+echo "منتظر بمونید... Docker در حال build و نصب است. این ممکن است چند دقیقه طول بکشد تا سرور آماده لاگین شود."
+while ! ss -tlnp | grep -q :3000; do
+    echo "در حال چک کردن... سرور هنوز آماده نیست. منتظر بمانید..."
+    sleep 10
+done
+echo "سرور آماده شد! حالا tunnel را راه‌اندازی می‌کنیم."
 
 # Now, outside screen, set up localtunnel
 echo "Setting up localtunnel..."
