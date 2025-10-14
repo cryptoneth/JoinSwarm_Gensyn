@@ -25,17 +25,34 @@ command_exists() {
 # Step 1: Install Homebrew if not installed
 if ! command_exists brew; then
     echo "Homebrew not found. Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # Run the installer and capture output
+    install_output=$( /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" 2>&1 )
     if [ $? -ne 0 ]; then
-        echo "Homebrew installation failed. Please check your internet connection or permissions."
+        echo "Homebrew installation failed. Output:"
+        echo "$install_output"
+        echo "Please check your internet connection or permissions."
         exit 1
     fi
-    echo "Homebrew installed successfully."
-    # Follow Homebrew's post-install instructions automatically
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zshrc
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-    # Reload shell
-    source ~/.zshrc || source ~/.bash_profile
+    echo "Homebrew installed successfully. Processing post-install commands..."
+
+    # Standard post-install for Apple Silicon (handles both /opt/homebrew and /usr/local via shellenv)
+    PROFILE_FILE="$HOME/.zprofile"
+    BREW_EVAL='eval "$(/opt/homebrew/bin/brew shellenv)"'
+
+    # Add to profile if not already present
+    if ! grep -q "$BREW_EVAL" "$PROFILE_FILE" 2>/dev/null; then
+        echo "$BREW_EVAL" >> "$PROFILE_FILE"
+        echo "Added Homebrew to $PROFILE_FILE"
+    else
+        echo "Homebrew already in $PROFILE_FILE"
+    fi
+
+    # Evaluate immediately
+    eval "$BREW_EVAL"
+
+    # Reload shell profile
+    source "$PROFILE_FILE" 2>/dev/null || source ~/.zshrc 2>/dev/null || source ~/.bash_profile
+
     # Verify installation
     if ! command_exists brew; then
         echo "Homebrew PATH not updated. Please restart your terminal and run this script again."
@@ -74,9 +91,12 @@ done
 if ! command_exists pyenv; then
     echo "Installing pyenv..."
     brew install pyenv
-    # Initialize pyenv
-    echo 'eval "$(pyenv init -)"' >> ~/.zshrc
-    source ~/.zshrc
+    # Initialize pyenv in profile
+    PYENV_INIT='eval "$(pyenv init -)"'
+    if ! grep -q "$PYENV_INIT" "$HOME/.zprofile" 2>/dev/null; then
+        echo "$PYENV_INIT" >> "$HOME/.zprofile"
+    fi
+    source "$HOME/.zprofile"
 else
     echo "pyenv is already installed."
 fi
@@ -129,5 +149,4 @@ sudo killall -HUP mDNSResponder 2>/dev/null || true
 
 # Final Step: Run the program
 echo "All setup complete! Starting BlockAssist... Follow any prompts for Hugging Face token, login, etc."
-cd
-cd blockassist
+pyenv exec python run.py
