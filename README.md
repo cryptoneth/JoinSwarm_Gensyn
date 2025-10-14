@@ -94,7 +94,7 @@ chmod +x blockassist.sh
 
 ```
 
-3 - get you huggingface token 
+3 - get your huggingface token 
 
 https://huggingface.co/settings/tokens
 
