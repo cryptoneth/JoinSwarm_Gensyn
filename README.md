@@ -98,6 +98,14 @@ chmod +x blockassist.sh
 
 https://huggingface.co/settings/tokens
 
+
+4 - Start
+
+```bash
+pyenv exec python run.py
+
+```
+
 4 - watch the video to continue
 
 # Enjoy Being SWARM, gSWARM
