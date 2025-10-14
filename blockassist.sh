@@ -35,14 +35,22 @@ if ! command_exists brew; then
     fi
     echo "Homebrew installed successfully. Processing post-install commands..."
 
-    # Standard post-install for Apple Silicon (handles both /opt/homebrew and /usr/local via shellenv)
+    # Get the correct prefix dynamically (works for both Apple Silicon and Intel)
+    BREW_PREFIX=$(brew --prefix 2>/dev/null || echo "/opt/homebrew")
+    BREW_EVAL="eval \"\$(/bin/brew shellenv)\""
+
+    # Determine profile file (prefer .zprofile for zsh, fallback to .zshrc or .bash_profile)
     PROFILE_FILE="$HOME/.zprofile"
-    BREW_EVAL='eval "$(/opt/homebrew/bin/brew shellenv)"'
+    if [[ -z "$ZSH_VERSION" ]]; then
+        PROFILE_FILE="$HOME/.bash_profile"
+    elif [[ ! -f "$PROFILE_FILE" ]]; then
+        PROFILE_FILE="$HOME/.zshrc"
+    fi
 
     # Add to profile if not already present
     if ! grep -q "$BREW_EVAL" "$PROFILE_FILE" 2>/dev/null; then
         echo "$BREW_EVAL" >> "$PROFILE_FILE"
-        echo "Added Homebrew to $PROFILE_FILE"
+        echo "Added Homebrew to $PROFILE_FILE (prefix: $BREW_PREFIX)"
     else
         echo "Homebrew already in $PROFILE_FILE"
     fi
@@ -93,10 +101,10 @@ if ! command_exists pyenv; then
     brew install pyenv
     # Initialize pyenv in profile
     PYENV_INIT='eval "$(pyenv init -)"'
-    if ! grep -q "$PYENV_INIT" "$HOME/.zprofile" 2>/dev/null; then
-        echo "$PYENV_INIT" >> "$HOME/.zprofile"
+    if ! grep -q "$PYENV_INIT" "$PROFILE_FILE" 2>/dev/null; then
+        echo "$PYENV_INIT" >> "$PROFILE_FILE"
     fi
-    source "$HOME/.zprofile"
+    source "$PROFILE_FILE"
 else
     echo "pyenv is already installed."
 fi
