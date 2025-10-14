@@ -129,4 +129,5 @@ sudo killall -HUP mDNSResponder 2>/dev/null || true
 
 # Final Step: Run the program
 echo "All setup complete! Starting BlockAssist... Follow any prompts for Hugging Face token, login, etc."
-pyenv exec python run.py
+cd
+cd blockassist
