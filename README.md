@@ -66,6 +66,39 @@ Gensyn Dashboard : https://dashboard.gensyn.ai/
 
 Write Your EOA
 
+===============================================
+
+# BlockAssist For ***JUST FOR MAC USERS
+
+VIDEO : 
+
+1 - install xcode on your mac if you didn't 
+
+```bash
+
+xcode-select --install
+
+```
+
+2 - now run the script
+
+```bash
+
+git clone https://github.com/cryptoneth/JoinSwarm_Gensyn.git
+
+cd JoinSwarm_Gensyn
+
+chmod +x blockassist.sh
+
+./blockassist.sh
+
+```
+
+3 - get you huggingface token 
+
+https://huggingface.co/settings/tokens
+
+4 - watch the video to continue
 
 # Enjoy Being SWARM, gSWARM
 
