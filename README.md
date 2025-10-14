@@ -102,6 +102,8 @@ https://huggingface.co/settings/tokens
 4 - Start
 
 ```bash
+cd
+cd blockassist
 pyenv exec python run.py
 
 ```
