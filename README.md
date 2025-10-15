@@ -70,7 +70,7 @@ Write Your EOA
 
 # BlockAssist For ***JUST FOR MAC USERS
 
-VIDEO : 
+VIDEO : https://x.com/0xCrypton_/status/1978421790239346884
 
 1 - install xcode on your mac if you didn't 
 
