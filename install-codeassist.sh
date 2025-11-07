@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                                                                          ║
-# ║    🚀 CODEASSIST AUTO-INSTALLER v1.0                                      ║
-# ║    Created by: 0xCrypton_ | Twitter: @0xCrypton_                           ║
-# ║    Follow me: https://twitter.com/0xCrypton_                             ║
-# ║                                                                          ║
-# ║    ⭐ Automated CodeAssist Installation with SSH Tunneling                ║
-# ║    🔧 Pre-configured with your HuggingFace token                           ║
-# ║    🌐 Secure tunnel access from anywhere                                    ║
-# ║                                                                          ║
+# ║                                                                         
+# ║    🚀 CODEASSIST AUTO-INSTALLER v1.0                                      
+# ║    Created by: 0xCrypton_ | Twitter: @0xCrypton_                           
+# ║    Follow me: https://twitter.com/0xCrypton_                             
+# ║                                                                          
+# ║    ⭐ Automated CodeAssist Installation with SSH Tunneling                
+# ║    🔧 Pre-configured with your HuggingFace token                           
+# ║    🌐 Secure tunnel access from anywhere                                    
+# ║                                                                          
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 # Color definitions for fancy output
@@ -336,9 +336,9 @@ fi
 print_header "SSH TUNNELING SETUP"
 
 echo -e "${CYAN}${BOLD}SSH TUNNELING COMMANDS:${NC}\n"
-echo -e "${BLUE}macOS/Linux:${NC} ${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 user@SERVER_IP${NC}"
-echo -e "${BLUE}Background:${NC}  ${GREEN}ssh -f -N -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 user@SERVER_IP${NC}\n"
-echo -e "${BLUE}Windows:${NC}     ${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 user@SERVER_IP${NC}\n"
+echo -e "${BLUE}macOS/Linux:${NC} ${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@SERVER_IP${NC}"
+echo -e "${BLUE}Background:${NC}  ${GREEN}ssh -f -N -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@SERVER_IP${NC}\n"
+echo -e "${BLUE}Windows:${NC}     ${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@SERVER_IP${NC}\n"
 echo -e "${YELLOW}Replace SERVER_IP with your server's IP address${NC}\n"
 
 print_header "INSTALLATION COMPLETE! 🎉"
