@@ -59,10 +59,12 @@ if [ ! -z "$EXISTING_CONTAINERS" ]; then
     echo "$EXISTING_CONTAINERS"
 
     print_info "Stopping all CodeAssist containers..."
+    docker stop codeassist-solution-tester codeassist-state-service codeassist-web-ui codeassist-policy-model codeassist-ollama
     docker stop $(docker ps -aq --filter "name=codeassist" 2>/dev/null) 2>/dev/null || true
 
     print_info "Removing all CodeAssist containers..."
     docker rm $(docker ps -aq --filter "name=codeassist" 2>/dev/null) 2>/dev/null || true
+    docker rm codeassist-solution-tester codeassist-state-service codeassist-web-ui codeassist-policy-model codeassist-ollama
 
     print_success "✅ All CodeAssist containers removed"
 else
