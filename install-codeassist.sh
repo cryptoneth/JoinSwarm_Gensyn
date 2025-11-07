@@ -47,14 +47,52 @@ fi
 
 echo -e "\n${CYAN}Server IP: ${BOLD}${GREEN}$SERVER_IP${NC}\n"
 
-# Simple cleanup - only clean what's necessary
-print_info "Cleaning up any existing CodeAssist processes..."
+# Comprehensive cleanup - remove all existing CodeAssist installations
+print_info "Cleaning up any existing CodeAssist installations..."
 
-# Simple and safe process cleanup
-pkill -f "uv.*run.*run.py" 2>/dev/null || true
+# Check for existing CodeAssist Docker containers
+print_info "Checking for existing CodeAssist Docker containers..."
+EXISTING_CONTAINERS=$(docker ps -a --filter "name=codeassist" --format "{{.Names}} {{.Status}}" 2>/dev/null || true)
 
-# Kill any processes on our ports but be very specific
-for port in 3000 8000 8008; do
+if [ ! -z "$EXISTING_CONTAINERS" ]; then
+    print_warning "Found existing CodeAssist containers:"
+    echo "$EXISTING_CONTAINERS"
+
+    print_info "Stopping all CodeAssist containers..."
+    docker stop $(docker ps -aq --filter "name=codeassist" 2>/dev/null) 2>/dev/null || true
+
+    print_info "Removing all CodeAssist containers..."
+    docker rm $(docker ps -aq --filter "name=codeassist" 2>/dev/null) 2>/dev/null || true
+
+    print_success "✅ All CodeAssist containers removed"
+else
+    print_success "✅ No existing CodeAssist containers found"
+fi
+
+# Stop processes that might conflict (avoid self-termination)
+print_info "Stopping conflicting processes..."
+
+# Get current script PID to avoid killing ourselves
+SCRIPT_PID=$$
+
+# Only kill specific UV processes that run CodeAssist
+UV_PIDS=$(pgrep -f "uv.*run.*run.py" 2>/dev/null || true)
+if [ ! -z "$UV_PIDS" ]; then
+    for pid in $UV_PIDS; do
+        if [ "$pid" != "$SCRIPT_PID" ]; then
+            kill -TERM $pid 2>/dev/null || true
+            sleep 1
+            kill -9 $pid 2>/dev/null || true
+        fi
+    done
+fi
+
+# Don't use broad pattern matching that could kill the script itself
+# Instead, let the port-based cleanup handle any remaining conflicts
+
+# Kill any processes on our required ports
+REQUIRED_PORTS="3000 3002 3003 8000 8001 8008 11434"
+for port in $REQUIRED_PORTS; do
     pids=$(lsof -ti:$port 2>/dev/null || true)
     if [ ! -z "$pids" ]; then
         print_info "Stopping processes on port $port..."
@@ -64,7 +102,7 @@ for port in 3000 8000 8008; do
     fi
 done
 
-print_success "Cleanup completed"
+print_success "✅ Comprehensive cleanup completed"
 
 # Create working directory
 WORK_DIR="/root/codeassist-setup"
@@ -148,13 +186,41 @@ fi
 
 print_success "CodeAssist started (PID: $CODEASSIST_PID)"
 
-# Check if process is running
-sleep 5
+# Check if process is running (CodeAssist may start Docker containers)
+sleep 10
+CODEASSIST_RUNNING=false
+
+# Method 1: Check if original PID is still running
 if kill -0 $CODEASSIST_PID 2>/dev/null; then
-    print_success "Process is running"
+    print_success "Process is running (PID: $CODEASSIST_PID)"
+    CODEASSIST_RUNNING=true
 else
-    print_error "Process died immediately"
+    print_info "Main process completed, checking Docker containers..."
+fi
+
+# Method 2: Check if CodeAssist Docker containers are running
+if [ "$CODEASSIST_RUNNING" = false ]; then
+    DOCKER_CONTAINERS=$(docker ps --filter "name=codeassist" --format "{{.Names}}" 2>/dev/null || true)
+    if [ ! -z "$DOCKER_CONTAINERS" ]; then
+        CONTAINER_COUNT=$(echo "$DOCKER_CONTAINERS" | wc -l)
+        print_success "CodeAssist is running via Docker containers ($CONTAINER_COUNT containers)"
+        CODEASSIST_RUNNING=true
+    fi
+fi
+
+# Method 3: Check if the web service is responding
+if [ "$CODEASSIST_RUNNING" = false ]; then
+    if curl -s --max-time 5 http://localhost:3000 > /dev/null 2>&1; then
+        print_success "CodeAssist is responding on port 3000"
+        CODEASSIST_RUNNING=true
+    fi
+fi
+
+# Final determination
+if [ "$CODEASSIST_RUNNING" = false ]; then
+    print_error "CodeAssist failed to start properly"
     print_info "Check logs: tail -f codeassist.log"
+    print_info "Check Docker: docker ps"
     exit 1
 fi
 
