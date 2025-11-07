@@ -1,57 +1,26 @@
 #!/bin/bash
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                                                                         
-# ║    🚀 CODEASSIST AUTO-INSTALLER v1.0                                      
-# ║    Created by: 0xCrypton_ | Twitter: @0xCrypton_                           
-# ║    Follow me: https://twitter.com/0xCrypton_                             
-# ║                                                                          
-# ║    ⭐ Automated CodeAssist Installation with SSH Tunneling                
-# ║    🔧 Pre-configured with your HuggingFace token                           
-# ║    🌐 Secure tunnel access from anywhere                                    
-# ║                                                                          
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+# Display logo and title
+echo -e "\e[33m"
+cat << "EOF"
+_________                        __                 
+\_   ___ \_______ ___.__._______/  |_  ____   ____  
+/    \  \/\_  __ <   |  |\____ \   __\/  _ \ /    \ 
+\     \____|  | \/\___  ||  |_> >  | (  <_> )   |  \
+ \______  /|__|   / ____||   __/|__|  \____/|___|  /
+        \/        \/     |__|                    \/
+EOF
+echo -e "\e[0m"
 
-# Color definitions for fancy output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-BOLD='\033[1m'
-NC='\033[0m' # No Color
+echo -e "\e[1;31mJOIN CodeAssist NOW\e[0m"
 
-# Emoji definitions
-ROCKET="🚀"
-CHECK="✅"
-WARNING="⚠️"
-ERROR="❌"
-INFO="ℹ️"
-GEAR="⚙️"
-KEY="🔑"
-LINK="🔗"
-CROWN="👑"
-
-# Animation function
-spin() {
-    local i=0
-    local sp="/-\|"
-    while [ $i -lt 5 ]; do
-        printf "\r${CYAN}${sp:i++%${#sp}:1} Working...${NC}"
-        sleep 0.1
-    done
-    printf "\r${GREEN}✅ Done!${NC}\n"
-}
-
-# Header
-clear
-echo -e "${BOLD}${BLUE}┌────────────────────────────────────────────────────────────────────────────┐${NC}"
-echo -e "${BOLD}${BLUE}│${NC} ${BOLD}CODEASSIST - GENSYN${NC}                                                 ${BOLD}${BLUE}│${NC}"
-echo -e "${BOLD}${BLUE}│${NC} by ${CYAN}0xCrypton_${NC} | ${BLUE}x.com/0xCrypton_${NC}                             ${BOLD}${BLUE}│${NC}"
-echo -e "${BOLD}${BLUE}└────────────────────────────────────────────────────────────────────────────┘${NC}"
-echo ""
+# Ask if following Twitter
+echo "Do you follow Crypton on Twitter? https://x.com/0xCrypton_"
+read -p "Press y if you followed: " follow
+if [ "$follow" != "y" ] && [ "$follow" != "Y" ]; then
+    echo "Please follow and try again."
+    exit 1
+fi
 
 # Function to print section headers
 print_header() {
