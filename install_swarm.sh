@@ -3,16 +3,16 @@
 # Display logo and title
 echo -e "\e[33m"
 cat << "EOF"
-_________                        __                 
-\_   ___ \_______ ___.__._______/  |_  ____   ____  
-/    \  \/\_  __ <   |  |\____ \   __\/  _ \ /    \ 
+_________                        __
+\_   ___ \_______ ___.__._______/  |_  ____   ____
+/    \  \/\_  __ <   |  |\____ \   __\/  _ \ /    \
 \     \____|  | \/\___  ||  |_> >  | (  <_> )   |  \
  \______  /|__|   / ____||   __/|__|  \____/|___|  /
         \/        \/     |__|                    \/
 EOF
 echo -e "\e[0m"
 
-echo -e "\e[1;31mJOIN SWARM NOW\e[0m"
+echo -e "\e[1;31mJOIN CodeAssist NOW\e[0m"
 
 # Ask if following Twitter
 echo "Do you follow Crypton on Twitter? https://x.com/0xCrypton_"
@@ -22,235 +22,259 @@ if [ "$follow" != "y" ] && [ "$follow" != "Y" ]; then
     exit 1
 fi
 
-# Ask for new install or restart
-read -p "New install or restart stopped one? (1 for new, 2 for restart): " choice
-if [ "$choice" != "1" ] && [ "$choice" != "2" ]; then
-    echo "Invalid choice. Please enter 1 or 2."
-    exit 1
-fi
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
 
-# Robust cleanup of any existing swarm screen session
-echo "Checking for existing swarm screen session..."
-screen -wipe  # Wipe detached sessions
-if screen -list | grep -q "swarm"; then
-    echo "Existing swarm session found. Closing it..."
-    screen -S swarm -X quit
-    sleep 2
-    # Force kill if still exists
-    if screen -list | grep -q "swarm"; then
-        echo "Force killing remaining swarm session..."
-        pkill -f "SCREEN -S swarm"
-        sleep 2
-    fi
-fi
+# Functions
+print_info() { echo -e "${CYAN}ℹ️ $1${NC}"; }
+print_success() { echo -e "${GREEN}✅ $1${NC}"; }
+print_error() { echo -e "${RED}❌ $1${NC}"; }
 
-SWARM_DIR="/root/rl-swarm"
-
-if [ "$choice" = "1" ]; then
-    echo "Starting new install. Cleaning up previous files..."
-    # Clean up rl-swarm directory if exists - ensure it's fully removed
-    if [ -d "$SWARM_DIR" ]; then
-        echo "Removing previous rl-swarm directory..."
-        rm -rf "$SWARM_DIR"
-        # Double-check removal
-        if [ -d "$SWARM_DIR" ]; then
-            echo "Warning: rl-swarm directory still exists after removal attempt."
-        else
-            echo "rl-swarm directory removed successfully."
-        fi
-    fi
-
-    # Step 1: Install Dependencies
-    echo "Installing dependencies..."
-    sudo apt update && sudo apt upgrade -y
-    sudo apt install screen curl iptables build-essential git wget lz4 jq make gcc nano automake autoconf tmux htop nvme-cli libgbm1 pkg-config libssl-dev libleveldb-dev tar clang bsdmainutils ncdu unzip libleveldb-dev -y
-    sudo apt install python3 python3-pip python3-venv python3-dev -y
-    sudo apt update
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
-    sudo apt install -y nodejs
-    node -v
-    npm install -g yarn
-    yarn -v
-    curl -o- -L https://yarnpkg.com/install.sh | bash
-    export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
-    source ~/.bashrc
-
-    # Install Docker
-    echo "Installing Docker..."
-    sudo apt-get update
-    sudo apt-get install ca-certificates curl gnupg lsb-release -y
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    sudo chmod a+r /etc/apt/keyrings/docker.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt-get update
-    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-    sudo systemctl start docker
-    sudo systemctl enable docker
-
-    # Step 2: Clone Repository in /root
-    echo "Cloning repository..."
-    cd /root
-    git clone https://github.com/gensyn-ai/rl-swarm/
-    cd "$SWARM_DIR" || exit
-
-    # Create screen session
-    echo "Creating screen session 'swarm'..."
-    screen -dmS swarm
-
-    # Execute commands inside screen
-    screen -S swarm -X stuff "cd $(pwd)\n"
-    screen -S swarm -X stuff "python3 -m venv .venv\n"
-    screen -S swarm -X stuff "source .venv/bin/activate || . .venv/bin/activate\n"
-
-    # Automatically edit the config file using sed
-    echo "Editing config file automatically..."
-    config_file="$SWARM_DIR/rgym_exp/config/rg-swarm.yaml"
-    if [ -f "$config_file" ]; then
-        sed -i 's/num_train_samples: .*/num_train_samples: 1/' "$config_file"
-        sed -i 's/startup_timeout: .*/startup_timeout: 180/' "$config_file"
-    else
-        echo "Config file not found, skipping edit."
-    fi
-
+# Auto-detect server IP
+print_info "Detecting server IP..."
+if SERVER_IP=$(curl -s ifconfig.me 2>/dev/null) && [[ "$SERVER_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    print_success "Server IP: $SERVER_IP"
 else
-    echo "Restarting stopped install..."
-    if [ ! -d "$SWARM_DIR" ]; then
-        echo "rl-swarm directory not found. Please run new install first."
+    SERVER_IP="YOUR_SERVER_IP"
+    print_info "Please replace YOUR_SERVER_IP with your actual server IP"
+fi
+
+echo -e "\n${CYAN}Server IP: ${BOLD}${GREEN}$SERVER_IP${NC}\n"
+
+# Comprehensive cleanup - remove all existing CodeAssist installations
+print_info "Cleaning up any existing CodeAssist installations..."
+
+# Check for existing CodeAssist Docker containers
+print_info "Checking for existing CodeAssist Docker containers..."
+EXISTING_CONTAINERS=$(docker ps -a --filter "name=codeassist" --format "{{.Names}} {{.Status}}" 2>/dev/null || true)
+
+if [ ! -z "$EXISTING_CONTAINERS" ]; then
+    print_warning "Found existing CodeAssist containers:"
+    echo "$EXISTING_CONTAINERS"
+
+    print_info "Stopping all CodeAssist containers..."
+    docker stop $(docker ps -aq --filter "name=codeassist" 2>/dev/null) 2>/dev/null || true
+
+    print_info "Removing all CodeAssist containers..."
+    docker rm $(docker ps -aq --filter "name=codeassist" 2>/dev/null) 2>/dev/null || true
+
+    print_success "✅ All CodeAssist containers removed"
+else
+    print_success "✅ No existing CodeAssist containers found"
+fi
+
+# Stop processes that might conflict (avoid self-termination)
+print_info "Stopping conflicting processes..."
+
+# Get current script PID to avoid killing ourselves
+SCRIPT_PID=$$
+
+# Only kill specific UV processes that run CodeAssist
+UV_PIDS=$(pgrep -f "uv.*run.*run.py" 2>/dev/null || true)
+if [ ! -z "$UV_PIDS" ]; then
+    for pid in $UV_PIDS; do
+        if [ "$pid" != "$SCRIPT_PID" ]; then
+            kill -TERM $pid 2>/dev/null || true
+            sleep 1
+            kill -9 $pid 2>/dev/null || true
+        fi
+    done
+fi
+
+# Don't use broad pattern matching that could kill the script itself
+# Instead, let the port-based cleanup handle any remaining conflicts
+
+# Kill any processes on our required ports
+REQUIRED_PORTS="3000 3002 3003 8000 8001 8008 11434"
+for port in $REQUIRED_PORTS; do
+    pids=$(lsof -ti:$port 2>/dev/null || true)
+    if [ ! -z "$pids" ]; then
+        print_info "Stopping processes on port $port..."
+        echo "$pids" | xargs -r kill -TERM 2>/dev/null || true
+        sleep 2
+        echo "$pids" | xargs -r kill -9 2>/dev/null || true
+    fi
+done
+
+print_success "✅ Comprehensive cleanup completed"
+
+# Create working directory
+WORK_DIR="/root/codeassist-setup"
+mkdir -p $WORK_DIR
+cd $WORK_DIR
+print_success "Working directory: $WORK_DIR"
+
+# Clone repository if needed
+if [ ! -d "codeassist" ]; then
+    print_info "Cloning CodeAssist repository..."
+    git clone https://github.com/gensyn-ai/codeassist.git
+    if [ $? -ne 0 ]; then
+        print_error "Failed to clone repository"
         exit 1
     fi
-    cd "$SWARM_DIR" || exit
-
-    # Create screen session
-    echo "Creating screen session 'swarm'..."
-    screen -dmS swarm
-
-    # Execute commands inside screen (activate venv)
-    screen -S swarm -X stuff "cd $(pwd)\n"
-    screen -S swarm -X stuff "source .venv/bin/activate || . .venv/bin/activate\n"
-
-    # No need to edit config again, assuming it's already done
-
+    print_success "Repository cloned"
+else
+    print_success "Repository already exists"
 fi
 
-# Common part: Run docker inside screen
-screen -S swarm -X stuff "docker compose run --rm --build -Pit swarm-cpu\n"
+# Change to directory
+cd codeassist || {
+    print_error "Failed to enter codeassist directory"
+    exit 1
+}
 
-# Enable logging for screen to monitor output
-screen -S swarm -X logfile /tmp/swarm.log
-screen -S swarm -X log
-
-# Wait for Docker to build and server to start listening on port 3000 without timeout
-echo "Please wait... Docker is building and installing. This may take several minutes until the server is ready for login."
-while ! ss -tlnp | grep -q :3000; do
-    sleep 10
-done
-echo "Server ready! Now setting up the tunnel."
-
-# Now, outside screen, set up localtunnel
-echo "Setting up localtunnel..."
-
-# Install localtunnel if not already
-if ! command -v lt &> /dev/null; then
-    sudo npm install -g localtunnel
-fi
-
-# Get password (VPS IP)
-password=$(curl https://loca.lt/mytunnelpassword)
-echo "Your tunnel password is: $password (which is your VPS IP)"
-
-# Run localtunnel and get URL
-lt --port 3000 > lt_output.log 2>&1 &
-lt_pid=$!
-
-# Wait a bit for URL to appear
-sleep 5
-url=$(grep -o 'https://[^ ]*' lt_output.log | head -1)
-echo "Your tunnel URL is: $url"
-echo "Go to this URL and login."
-
-# Manual confirmation for login completion
-echo "Login complete? Press y to continue to interactive prompts: "
-read -p "Login done? (y): " login_done
-if [ "$login_done" != "y" ] && [ "$login_done" != "Y" ]; then
-    echo "Please login first and try again."
+# Check if run.py exists
+if [ ! -f "run.py" ]; then
+    print_error "run.py not found"
     exit 1
 fi
 
-# Function to wait for a specific prompt in screen log and get user input
-wait_for_prompt() {
-  local prompt_pattern="$1"
-  local user_prompt="$2"
-  local response
-  local wait_timeout=60  # 2 minutes timeout for each prompt
-  local wait_counter=0
-  echo "Waiting for prompt: $user_prompt"
-  while true; do
-    if tail -n 50 /tmp/swarm.log | grep -q "$prompt_pattern"; then
-      echo "$user_prompt"
-      read -p "Enter your response (press Enter for default): " response
-      if [ -z "$response" ]; then
-        screen -S swarm -X stuff "\n"
-      else
-        screen -S swarm -X stuff "$response\n"
-      fi
-      # Wait a bit for the input to be processed
-      sleep 1
-      break
+print_success "Found run.py in $(pwd)"
+
+# Install HF token
+print_info "Setting up HuggingFace token..."
+echo -n "Enter your HF token (or press Enter to skip): "
+read -r HF_TOKEN
+
+if [ ! -z "$HF_TOKEN" ]; then
+    if [[ "$HF_TOKEN" =~ ^hf_[a-zA-Z0-9]{34}$ ]]; then
+        echo "HF_TOKEN=$HF_TOKEN" > .env
+        export HF_TOKEN=$HF_TOKEN
+        print_success "HF token configured"
+    else
+        print_error "Invalid HF token format"
+        exit 1
     fi
-    if [ $wait_counter -ge $wait_timeout ]; then
-      echo "Timeout for prompt: $user_prompt. Continuing anyway."
-      break
-    fi
-    sleep 1  # Reduced sleep for more responsive checking
-    wait_counter=$((wait_counter + 1))
-  done
-}
-
-# Handle interactive prompts after login
-echo "Login complete. Handling interactive prompts..."
-
-# First prompt: Hugging Face push
-wait_for_prompt "push models you train in the RL swarm to the Hugging Face Hub" ">> Would you like to push models to Hugging Face Hub? [y/N]"
-
-# Second prompt: Model name
-wait_for_prompt "Enter the name of the model you want to use in huggingface repo/name format" ">> Enter model name (or Enter for default):"
-
-# Third prompt: AI Prediction Market
-wait_for_prompt "your model to participate in the AI Prediction Market" ">> Participate in AI Prediction Market? [Y/n]"
-
-# Wait for node to be fully ready by checking for Hello line in log
-echo "Waiting for node to be fully ready..."
-node_timeout=60  # 10 minutes for node ready
-node_counter=0
-while ! tail -n 100 /tmp/swarm.log | grep -q '🐱 Hello 🐈 \[.*\] 🦮 \[.*\]!'; do
-    if [ $node_counter -ge $node_timeout ]; then
-        echo "Timeout waiting for node ready. Check screen: screen -r swarm"
-        break
-    fi
-    echo "Node not ready yet. Waiting... ($((node_counter * 10))s elapsed)"
-    sleep 10
-    node_counter=$((node_counter + 1))
-done
-echo "Node ready! Displaying information."
-
-# Display userdata.json and node info
-echo "Installation complete."
-echo "UserData.json content:"
-cat "$SWARM_DIR/user/modal-login/userData.json"
-
-# Capture node info from screen log
-tail -n 100 /tmp/swarm.log > node_info.txt
-
-# Extract and display the specific Hello line
-hello_line=$(grep -o '🐱 Hello 🐈 \[.*\] 🦮 \[.*\]!' node_info.txt | tail -1)
-if [ -n "$hello_line" ]; then
-    echo "Node Hello Info:"
-    echo "$hello_line"
 else
-    echo "Node Hello Info not found. Check screen manually."
-    tail -n 50 node_info.txt
+    print_warning "No HF token provided - some features may not work"
 fi
 
-echo "You can manage the screen session with: screen -r swarm"
-echo "All done! Goodbye!"
+# Install dependencies
+print_info "Installing dependencies with UV..."
+if ! command -v uv &> /dev/null; then
+    print_error "UV not found. Installing..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.cargo/bin:$PATH"
+fi
+
+uv sync
+if [ $? -ne 0 ]; then
+    print_error "Failed to install dependencies"
+    exit 1
+fi
+
+print_success "Dependencies installed"
+
+# Start CodeAssist
+print_info "Starting CodeAssist..."
+export HF_TOKEN=$HF_TOKEN
+
+# Start in background with logging
+nohup uv run run.py > codeassist.log 2>&1 &
+CODEASSIST_PID=$!
+
+if [ -z "$CODEASSIST_PID" ]; then
+    print_error "Failed to start CodeAssist"
+    exit 1
+fi
+
+print_success "CodeAssist started (PID: $CODEASSIST_PID)"
+
+# Check if process is running (CodeAssist may start Docker containers)
+sleep 10
+CODEASSIST_RUNNING=false
+
+# Method 1: Check if original PID is still running
+if kill -0 $CODEASSIST_PID 2>/dev/null; then
+    print_success "Process is running (PID: $CODEASSIST_PID)"
+    CODEASSIST_RUNNING=true
+else
+    print_info "Main process completed, checking Docker containers..."
+fi
+
+# Method 2: Check if CodeAssist Docker containers are running
+if [ "$CODEASSIST_RUNNING" = false ]; then
+    DOCKER_CONTAINERS=$(docker ps --filter "name=codeassist" --format "{{.Names}}" 2>/dev/null || true)
+    if [ ! -z "$DOCKER_CONTAINERS" ]; then
+        CONTAINER_COUNT=$(echo "$DOCKER_CONTAINERS" | wc -l)
+        print_success "CodeAssist is running via Docker containers ($CONTAINER_COUNT containers)"
+        CODEASSIST_RUNNING=true
+    fi
+fi
+
+# Method 3: Check if the web service is responding
+if [ "$CODEASSIST_RUNNING" = false ]; then
+    if curl -s --max-time 5 http://localhost:3000 > /dev/null 2>&1; then
+        print_success "CodeAssist is responding on port 3000"
+        CODEASSIST_RUNNING=true
+    fi
+fi
+
+# Final determination
+if [ "$CODEASSIST_RUNNING" = false ]; then
+    print_error "CodeAssist failed to start properly"
+    print_info "Check logs: tail -f codeassist.log"
+    print_info "Check Docker: docker ps"
+    exit 1
+fi
+
+# Wait for services to start
+print_info "Waiting for services to start (30 seconds)..."
+sleep 30
+
+# Check services
+print_info "Checking services..."
+SERVICES_UP=0
+
+if curl -s http://localhost:3000 > /dev/null 2>&1; then
+    print_success "✓ Main UI (http://localhost:3000)"
+    ((SERVICES_UP++))
+else
+    print_info "⏳ Main UI still starting..."
+fi
+
+if curl -s http://localhost:8000 > /dev/null 2>&1; then
+    print_success "✓ State Service (http://localhost:8000)"
+    ((SERVICES_UP++))
+fi
+
+if curl -s http://localhost:8008 > /dev/null 2>&1; then
+    print_success "✓ Solution Tester (http://localhost:8008)"
+    ((SERVICES_UP++))
+fi
+
+# SSH Commands
+echo -e "\n${BLUE}${BOLD}🔗 SSH TUNNELING COMMANDS:${NC}"
+
+echo -e "${YELLOW}📱 FOR ALL DEVICES:${NC}"
+echo -e "${CYAN}Essential Services (Ports 3000, 8000, 8008):${NC}"
+echo -e "${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$SERVER_IP${NC}"
+
+echo -e "\n${YELLOW}🖥️ Windows (PowerShell/CMD):${NC}"
+echo -e "${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$SERVER_IP${NC}"
+
+echo -e "\n${YELLOW}🍎 macOS / 🐧 Linux (Terminal):${NC}"
+echo -e "${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$SERVER_IP${NC}"
+
+echo -e "\n${YELLOW}🔄 Background Mode (All Devices):${NC}"
+echo -e "${GREEN}ssh -f -N -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$SERVER_IP${NC}"
+
+echo -e "\n${YELLOW}📡 Complete Access (All Ports):${NC}"
+echo -e "${GREEN}ssh -L 3000:localhost:3000 -L 3002:localhost:3002 -L 3003:localhost:3003 -L 8000:localhost:8000 -L 8001:localhost:8001 -L 8008:localhost:8008 -L 11434:localhost:11434 root@$SERVER_IP${NC}"
+
+echo -e "\n${CYAN}💡 After connecting, open: ${GREEN}http://localhost:3000${NC}"
+echo -e "${CYAN}📱 Keep SSH connection open while using CodeAssist${NC}"
+
+# Completion message
+echo -e "\n${GREEN}${BOLD}🎉 INSTALLATION COMPLETE!${NC}"
+echo -e "${BLUE}Services running: ${GREEN}$SERVICES_UP${NC}/3"
+echo -e "${BLUE}Log file: ${CYAN}codeassist.log${NC}"
+echo -e "${BLUE}PID file: ${CYAN}codeassist.pid${NC}"
+
+echo -e "\n${GREEN}${BOLD}🚀 Happy coding with CodeAssist!${NC}\n"
