@@ -110,5 +110,37 @@ pyenv exec python run.py
 
 4 - watch the video to continue
 
+====================================================
+
+# CodeAssist 
+
+1 - get your huggingface token 
+
+https://huggingface.co/settings/tokens
+
+2 - now run the script
+
+```bash
+
+rm -r JoinSwarm_Gensyn
+
+git clone https://github.com/cryptoneth/JoinSwarm_Gensyn.git
+
+cd JoinSwarm_Gensyn
+
+chmod +x install-codeassist.sh
+
+./install-codeassist.sh
+
+```
+
 # Enjoy Being SWARM, gSWARM
+
+====================================================
+
+
+
+
+
+
 
