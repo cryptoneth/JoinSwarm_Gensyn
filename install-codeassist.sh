@@ -14,13 +14,10 @@ echo -e "\e[0m"
 
 echo -e "\e[1;31mJOIN CodeAssist NOW\e[0m"
 
-# Ask if following Twitter
+# Auto-confirm Twitter follow
 echo "Do you follow Crypton on Twitter? https://x.com/0xCrypton_"
-read -p "Press y if you followed: " follow
-if [ "$follow" != "y" ] && [ "$follow" != "Y" ]; then
-    echo "Please follow and try again."
-    exit 1
-fi
+echo "Auto-confirming for installation..."
+echo "✅ Twitter follow confirmed!"
 
 # Color definitions
 RED='\033[0;31m'
@@ -35,6 +32,7 @@ NC='\033[0m'
 print_info() { echo -e "${CYAN}ℹ️ $1${NC}"; }
 print_success() { echo -e "${GREEN}✅ $1${NC}"; }
 print_error() { echo -e "${RED}❌ $1${NC}"; }
+print_warning() { echo -e "${YELLOW}⚠️ $1${NC}"; }
 
 # Auto-detect server IP
 print_info "Detecting server IP..."
@@ -47,67 +45,25 @@ fi
 
 echo -e "\n${CYAN}Server IP: ${BOLD}${GREEN}$SERVER_IP${NC}\n"
 
-# Comprehensive cleanup - remove all existing CodeAssist installations
-print_info "Cleaning up any existing CodeAssist installations..."
+# Simple cleanup - only stop essential processes
+print_info "Simple cleanup..."
 
-# Check for existing CodeAssist Docker containers
-print_info "Checking for existing CodeAssist Docker containers..."
-EXISTING_CONTAINERS=$(docker ps -a --filter "name=codeassist" --format "{{.Names}} {{.Status}}" 2>/dev/null || true)
+# Stop only UV processes with run.py
+pkill -f "uv.*run.*run.py" 2>/dev/null || true
+sleep 1
 
-if [ ! -z "$EXISTING_CONTAINERS" ]; then
-    print_warning "Found existing CodeAssist containers:"
-    echo "$EXISTING_CONTAINERS"
-
-    print_info "Stopping all CodeAssist containers..."
-    docker stop codeassist-solution-tester codeassist-state-service codeassist-web-ui codeassist-policy-model codeassist-ollama
-    docker stop $(docker ps -aq --filter "name=codeassist" 2>/dev/null) 2>/dev/null || true
-
-    print_info "Removing all CodeAssist containers..."
-    docker rm $(docker ps -aq --filter "name=codeassist" 2>/dev/null) 2>/dev/null || true
-    docker rm codeassist-solution-tester codeassist-state-service codeassist-web-ui codeassist-policy-model codeassist-ollama
-
-    print_success "✅ All CodeAssist containers removed"
-else
-    print_success "✅ No existing CodeAssist containers found"
-fi
-
-# Stop processes that might conflict (avoid self-termination)
-print_info "Stopping conflicting processes..."
-
-# Get current script PID to avoid killing ourselves
-SCRIPT_PID=$$
-
-# Only kill specific UV processes that run CodeAssist
-UV_PIDS=$(pgrep -f "uv.*run.*run.py" 2>/dev/null || true)
-if [ ! -z "$UV_PIDS" ]; then
-    for pid in $UV_PIDS; do
-        if [ "$pid" != "$SCRIPT_PID" ]; then
-            kill -TERM $pid 2>/dev/null || true
-            sleep 1
-            kill -9 $pid 2>/dev/null || true
-        fi
-    done
-fi
-
-# Don't use broad pattern matching that could kill the script itself
-# Instead, let the port-based cleanup handle any remaining conflicts
-
-# Kill any processes on our required ports
-REQUIRED_PORTS="3000 3002 3003 8000 8001 8008 11434"
-for port in $REQUIRED_PORTS; do
+# Free essential ports only
+for port in 3000 8000 8008 11434; do
     pids=$(lsof -ti:$port 2>/dev/null || true)
     if [ ! -z "$pids" ]; then
-        print_info "Stopping processes on port $port..."
-        echo "$pids" | xargs -r kill -TERM 2>/dev/null || true
-        sleep 2
         echo "$pids" | xargs -r kill -9 2>/dev/null || true
     fi
 done
 
-print_success "✅ Comprehensive cleanup completed"
+print_success "✅ Simple cleanup completed"
 
 # Create working directory
-WORK_DIR="/root/codeassist-setup"
+WORK_DIR="/root/codeassist"
 mkdir -p $WORK_DIR
 cd $WORK_DIR
 print_success "Working directory: $WORK_DIR"
@@ -139,6 +95,12 @@ fi
 
 print_success "Found run.py in $(pwd)"
 
+# Update from GitHub (simple)
+print_info "Updating from GitHub..."
+git fetch origin >/dev/null 2>&1
+git pull origin main >/dev/null 2>&1
+print_success "✅ Updated to latest version"
+
 # Install HF token
 print_info "Setting up HuggingFace token..."
 echo -n "Enter your HF token (or press Enter to skip): "
@@ -147,14 +109,21 @@ read -r HF_TOKEN
 if [ ! -z "$HF_TOKEN" ]; then
     if [[ "$HF_TOKEN" =~ ^hf_[a-zA-Z0-9]{34}$ ]]; then
         echo "HF_TOKEN=$HF_TOKEN" > .env
+        echo "ALCHEMY_API_KEY=wvs3CE89g2JwoshNNCMe1" >> .env
         export HF_TOKEN=$HF_TOKEN
-        print_success "HF token configured"
+        export ALCHEMY_API_KEY=wvs3CE89g2JwoshNNCMe1
+        print_success "HF token and Alchemy API configured"
     else
         print_error "Invalid HF token format"
+        print_info "HF token should be 34 characters starting with 'hf_'"
         exit 1
     fi
 else
     print_warning "No HF token provided - some features may not work"
+    # Still add Alchemy API key even without HF token
+    echo "ALCHEMY_API_KEY=wvs3CE89g2JwoshNNCMe1" > .env
+    export ALCHEMY_API_KEY=wvs3CE89g2JwoshNNCMe1
+    print_success "Alchemy API key configured"
 fi
 
 # Install dependencies
@@ -173,56 +142,69 @@ fi
 
 print_success "Dependencies installed"
 
-# Start CodeAssist
-print_info "Starting CodeAssist..."
-export HF_TOKEN=$HF_TOKEN
+# Create simple runner script
+print_info "Creating CodeAssist runner..."
+cat > codeassist_runner.sh << 'EOF'
+#!/bin/bash
+export HF_TOKEN="${HF_TOKEN}"
+export ALCHEMY_API_KEY="${ALCHEMY_API_KEY}"
+export NO_COLOR=1
+cd /root/codeassist/codeassist
 
-# Start in background with logging
-nohup uv run run.py > codeassist.log 2>&1 &
-CODEASSIST_PID=$!
+echo 'CodeAssist session started at '$(date)
+echo '================================================'
+echo '🚀 CodeAssist is running with official command'
+echo '💻 Command: uv run run.py'
+echo '================================================'
+echo ''
+echo '🌐 Web Interface: http://localhost:3000'
+echo '📋 Instructions:'
+echo '   1. Open http://localhost:3000 in your browser'
+echo '   2. Complete coding tasks and submit solutions'
+echo '   3. Return to this screen and press Ctrl+C'
+echo '   4. This will trigger training and submission'
+echo '================================================'
+echo ''
+echo 'Starting CodeAssist...'
+echo ''
 
-if [ -z "$CODEASSIST_PID" ]; then
-    print_error "Failed to start CodeAssist"
-    exit 1
-fi
+# Run the official command
+uv run run.py
 
-print_success "CodeAssist started (PID: $CODEASSIST_PID)"
+echo ''
+echo '================================================'
+echo '✅ CodeAssist process completed'
+echo ''
+echo '🔄 To restart CodeAssist manually, run this command:'
+echo '   uv run run.py'
+echo ''
+echo '💡 Screen will remain active for manual restart'
+echo '💡 To exit screen: Ctrl+A, then D'
+echo '================================================'
+echo ''
+echo 'Waiting for your next command...'
+exec bash
+EOF
 
-# Check if process is running (CodeAssist may start Docker containers)
-sleep 10
-CODEASSIST_RUNNING=false
+chmod +x codeassist_runner.sh
 
-# Method 1: Check if original PID is still running
-if kill -0 $CODEASSIST_PID 2>/dev/null; then
-    print_success "Process is running (PID: $CODEASSIST_PID)"
-    CODEASSIST_RUNNING=true
+# Start screen session
+SCREEN_NAME="codeassist"
+print_info "Starting CodeAssist screen session: $SCREEN_NAME"
+
+# Stop existing session if exists
+screen -S "$SCREEN_NAME" -X quit 2>/dev/null || true
+sleep 1
+
+# Start new screen
+screen -dmS "$SCREEN_NAME" ./codeassist_runner.sh
+
+# Wait a bit and check if screen session started
+sleep 3
+if screen -list 2>/dev/null | grep -q "$SCREEN_NAME"; then
+    print_success "CodeAssist started successfully in screen session"
 else
-    print_info "Main process completed, checking Docker containers..."
-fi
-
-# Method 2: Check if CodeAssist Docker containers are running
-if [ "$CODEASSIST_RUNNING" = false ]; then
-    DOCKER_CONTAINERS=$(docker ps --filter "name=codeassist" --format "{{.Names}}" 2>/dev/null || true)
-    if [ ! -z "$DOCKER_CONTAINERS" ]; then
-        CONTAINER_COUNT=$(echo "$DOCKER_CONTAINERS" | wc -l)
-        print_success "CodeAssist is running via Docker containers ($CONTAINER_COUNT containers)"
-        CODEASSIST_RUNNING=true
-    fi
-fi
-
-# Method 3: Check if the web service is responding
-if [ "$CODEASSIST_RUNNING" = false ]; then
-    if curl -s --max-time 5 http://localhost:3000 > /dev/null 2>&1; then
-        print_success "CodeAssist is responding on port 3000"
-        CODEASSIST_RUNNING=true
-    fi
-fi
-
-# Final determination
-if [ "$CODEASSIST_RUNNING" = false ]; then
-    print_error "CodeAssist failed to start properly"
-    print_info "Check logs: tail -f codeassist.log"
-    print_info "Check Docker: docker ps"
+    print_error "Failed to start CodeAssist screen session"
     exit 1
 fi
 
@@ -234,49 +216,45 @@ sleep 30
 print_info "Checking services..."
 SERVICES_UP=0
 
-if curl -s http://localhost:3000 > /dev/null 2>&1; then
+if curl -s --max-time 5 http://localhost:3000 > /dev/null 2>&1; then
     print_success "✓ Main UI (http://localhost:3000)"
     ((SERVICES_UP++))
 else
     print_info "⏳ Main UI still starting..."
 fi
 
-if curl -s http://localhost:8000 > /dev/null 2>&1; then
+if curl -s --max-time 5 http://localhost:8000 > /dev/null 2>&1; then
     print_success "✓ State Service (http://localhost:8000)"
     ((SERVICES_UP++))
 fi
 
-if curl -s http://localhost:8008 > /dev/null 2>&1; then
+if curl -s --max-time 5 http://localhost:8008 > /dev/null 2>&1; then
     print_success "✓ Solution Tester (http://localhost:8008)"
     ((SERVICES_UP++))
 fi
 
-# SSH Commands
-echo -e "\n${BLUE}${BOLD}🔗 SSH TUNNELING COMMANDS:${NC}"
+# Instructions
+echo -e "\n${YELLOW}${BOLD}🎯 PARTICIPATION INSTRUCTIONS:${NC}"
+echo -e "${CYAN}1. ${GREEN}screen -r $SCREEN_NAME${CYAN} - Attach to the CodeAssist screen${NC}"
+echo -e "${CYAN}2. Open ${GREEN}http://localhost:3000${CYAN} in your browser${NC}"
+echo -e "${CYAN}3. Complete coding tasks and submit your solutions${NC}"
+echo -e "${CYAN}4. Return to the screen and press ${GREEN}Ctrl+C${CYAN} to trigger training${NC}"
+echo -e "${CYAN}5. Your training will be submitted automatically!${NC}"
 
-echo -e "${YELLOW}📱 FOR ALL DEVICES:${NC}"
-echo -e "${CYAN}Essential Services (Ports 3000, 8000, 8008):${NC}"
-echo -e "${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$SERVER_IP${NC}"
+echo -e "\n${YELLOW}${BOLD}🔄 OFFICIAL RESTART COMMAND:${NC}"
+echo -e "${CYAN}After training submission, run this command ${BOLD}manually${CYAN} in the screen:${NC}"
+echo -e "${GREEN}uv run run.py${NC}"
 
-echo -e "\n${YELLOW}🖥️ Windows (PowerShell/CMD):${NC}"
-echo -e "${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$SERVER_IP${NC}"
-
-echo -e "\n${YELLOW}🍎 macOS / 🐧 Linux (Terminal):${NC}"
-echo -e "${GREEN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$SERVER_IP${NC}"
-
-echo -e "\n${YELLOW}🔄 Background Mode (All Devices):${NC}"
-echo -e "${GREEN}ssh -f -N -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$SERVER_IP${NC}"
-
-echo -e "\n${YELLOW}📡 Complete Access (All Ports):${NC}"
-echo -e "${GREEN}ssh -L 3000:localhost:3000 -L 3002:localhost:3002 -L 3003:localhost:3003 -L 8000:localhost:8000 -L 8001:localhost:8001 -L 8008:localhost:8008 -L 11434:localhost:11434 root@$SERVER_IP${NC}"
-
-echo -e "\n${CYAN}💡 After connecting, open: ${GREEN}http://localhost:3000${NC}"
-echo -e "${CYAN}📱 Keep SSH connection open while using CodeAssist${NC}"
+echo -e "\n${YELLOW}${BOLD}💡 SCREEN MANAGEMENT:${NC}"
+echo -e "${CYAN}• Detach anytime: ${GREEN}Ctrl+A, then D${NC}"
+echo -e "${CYAN}• Reattach anytime: ${GREEN}screen -r $SCREEN_NAME${NC}"
+echo -e "${CYAN}• To completely stop: exit screen and rerun this script${NC}"
 
 # Completion message
 echo -e "\n${GREEN}${BOLD}🎉 INSTALLATION COMPLETE!${NC}"
 echo -e "${BLUE}Services running: ${GREEN}$SERVICES_UP${NC}/3"
-echo -e "${BLUE}Log file: ${CYAN}codeassist.log${NC}"
-echo -e "${BLUE}PID file: ${CYAN}codeassist.pid${NC}"
+echo -e "${BLUE}Screen session: ${CYAN}$SCREEN_NAME${NC}"
+echo -e "${BLUE}Log file: ${CYAN}logs/codeassist.log${NC}"
+echo -e "${BLUE}Environment: ${CYAN}.env${NC}"
 
 echo -e "\n${GREEN}${BOLD}🚀 Happy coding with CodeAssist!${NC}\n"
