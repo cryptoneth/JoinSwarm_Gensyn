@@ -151,6 +151,9 @@ export ALCHEMY_API_KEY="${ALCHEMY_API_KEY}"
 export NO_COLOR=1
 cd /root/codeassist/codeassist
 
+# Get server IP for display
+SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "YOUR_SERVER_IP")
+
 echo 'CodeAssist session started at '$(date)
 echo '================================================'
 echo '🚀 CodeAssist is running with official command'
@@ -158,6 +161,11 @@ echo '💻 Command: uv run run.py'
 echo '================================================'
 echo ''
 echo '🌐 Web Interface: http://localhost:3000'
+echo ''
+echo '🔗 REMOTE ACCESS (SSH Tunnels):'
+echo '   macOS/Linux: ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@'${SERVER_IP}
+echo '   Windows (PuTTY): Set up port forwarding for ports 3000, 8000, 8008'
+echo ''
 echo '📋 Instructions:'
 echo '   1. Open http://localhost:3000 in your browser'
 echo '   2. Complete coding tasks and submit solutions'
@@ -233,6 +241,24 @@ if curl -s --max-time 5 http://localhost:8008 > /dev/null 2>&1; then
     ((SERVICES_UP++))
 fi
 
+# SSH Tunnel Instructions for Remote Access
+echo -e "\n${YELLOW}${BOLD}🔗 REMOTE ACCESS INSTRUCTIONS (SSH Tunnels):${NC}"
+echo -e "${CYAN}If you're accessing this server remotely, use these SSH tunnel commands:${NC}\n"
+
+echo -e "${GREEN}${BOLD}For macOS/Linux Users:${NC}"
+echo -e "${CYAN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@${SERVER_IP}${NC}\n"
+
+echo -e "${GREEN}${BOLD}For Windows Users (PowerShell):${NC}"
+echo -e "${CYAN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@${SERVER_IP}${NC}\n"
+
+echo -e "${GREEN}${BOLD}For Windows Users (PuTTY):${NC}"
+echo -e "${CYAN}1. In PuTTY, go to Connection > SSH > Tunnels${NC}"
+echo -e "${CYAN}2. Add these port forwards:${NC}"
+echo -e "${CYAN}   • Source port: 3000, Destination: localhost:3000${NC}"
+echo -e "${CYAN}   • Source port: 8000, Destination: localhost:8000${NC}"
+echo -e "${CYAN}   • Source port: 8008, Destination: localhost:8008${NC}"
+echo -e "${CYAN}3. Click Add, then connect to root@${SERVER_IP}${NC}\n"
+
 # Instructions
 echo -e "\n${YELLOW}${BOLD}🎯 PARTICIPATION INSTRUCTIONS:${NC}"
 echo -e "${CYAN}1. ${GREEN}screen -r $SCREEN_NAME${CYAN} - Attach to the CodeAssist screen${NC}"
@@ -256,5 +282,10 @@ echo -e "${BLUE}Services running: ${GREEN}$SERVICES_UP${NC}/3"
 echo -e "${BLUE}Screen session: ${CYAN}$SCREEN_NAME${NC}"
 echo -e "${BLUE}Log file: ${CYAN}logs/codeassist.log${NC}"
 echo -e "${BLUE}Environment: ${CYAN}.env${NC}"
+
+echo -e "\n${YELLOW}${BOLD}💡 REMINDER:${NC}"
+echo -e "${CYAN}• Local access: ${GREEN}http://localhost:3000${NC}"
+echo -e "${CYAN}• Remote access: Use SSH tunnels as shown above${NC}"
+echo -e "${CYAN}• Server IP: ${GREEN}${SERVER_IP}${NC}"
 
 echo -e "\n${GREEN}${BOLD}🚀 Happy coding with CodeAssist!${NC}\n"
