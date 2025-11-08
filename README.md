@@ -121,8 +121,11 @@ https://huggingface.co/settings/tokens
 2 - now run the script
 
 ```bash
+cd 
 
 rm -r JoinSwarm_Gensyn
+rm -r codeassist
+screen -X codeassist -S quit
 
 git clone https://github.com/cryptoneth/JoinSwarm_Gensyn.git
 
