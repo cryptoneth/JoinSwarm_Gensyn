@@ -251,13 +251,6 @@ echo -e "${CYAN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localh
 echo -e "${GREEN}${BOLD}For Windows Users (PowerShell):${NC}"
 echo -e "${CYAN}ssh -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@${SERVER_IP}${NC}\n"
 
-echo -e "${GREEN}${BOLD}For Windows Users (PuTTY):${NC}"
-echo -e "${CYAN}1. In PuTTY, go to Connection > SSH > Tunnels${NC}"
-echo -e "${CYAN}2. Add these port forwards:${NC}"
-echo -e "${CYAN}   • Source port: 3000, Destination: localhost:3000${NC}"
-echo -e "${CYAN}   • Source port: 8000, Destination: localhost:8000${NC}"
-echo -e "${CYAN}   • Source port: 8008, Destination: localhost:8008${NC}"
-echo -e "${CYAN}3. Click Add, then connect to root@${SERVER_IP}${NC}\n"
 
 # Instructions
 echo -e "\n${YELLOW}${BOLD}🎯 PARTICIPATION INSTRUCTIONS:${NC}"
