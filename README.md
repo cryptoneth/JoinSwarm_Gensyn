@@ -131,8 +131,8 @@ git clone https://github.com/cryptoneth/JoinSwarm_Gensyn.git
 
 cd JoinSwarm_Gensyn
 
-chmod +x codeassist_installer.sh
-./codeassist_installer.sh
+chmod +x install-codeassist.sh
+./install-codeassist.sh
 ```
 
 now head to screen and wait till installation proccess finish.
