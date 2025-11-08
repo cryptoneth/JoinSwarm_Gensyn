@@ -139,7 +139,8 @@ now head to screen and wait till installation proccess finish.
 
 ```
 screen -r Codeassist
-
+```
+```
 cd codeassist
 uv run run.py
 
