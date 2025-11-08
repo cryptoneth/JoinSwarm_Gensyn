@@ -146,8 +146,11 @@ uv run run.py
 ```
 
 After just Copy Your SSH Code and use it in your windows/mac terminal
+
 then go to http://localhost:3000
+
 solve the problems
+
 then go back to screen and submit your solutions via crtl+C
 
 Check your participation on https://dashboard.gensyn.ai
