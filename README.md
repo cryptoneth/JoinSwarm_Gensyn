@@ -121,21 +121,36 @@ https://huggingface.co/settings/tokens
 2 - now run the script
 
 ```bash
-cd 
 
+cd 
 rm -r JoinSwarm_Gensyn
 rm -r codeassist
-screen -X codeassist -S quit
+screen -X Codeassist -S quit
 
 git clone https://github.com/cryptoneth/JoinSwarm_Gensyn.git
 
 cd JoinSwarm_Gensyn
 
-chmod +x install-codeassist.sh
+chmod +x codeassist_installer.sh
+./codeassist_installer.sh
+```
 
-./install-codeassist.sh
+now head to screen and wait till installation proccess finish.
 
 ```
+screen -r Codeassist
+
+cd codeassist
+uv run run.py
+
+```
+
+After just Copy Your SSH Code and use it in your windows/mac terminal
+then go to http://localhost:3000
+solve the problems
+then go back to screen and submit your solutions via crtl+C
+
+Check your participation on https://dashboard.gensyn.ai
 
 # Enjoy Being SWARM, gSWARM
 
