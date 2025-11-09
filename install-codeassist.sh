@@ -111,6 +111,12 @@ else
     print_success "Docker installation completed."
 fi
 
+# Restart Docker daemon for stability
+print_info "Restarting Docker daemon for stability..."
+sudo systemctl restart docker
+sleep 5  # Wait for restart
+print_success "Docker daemon restarted."
+
 # Free up required ports: 3000, 8000, 8001, 8008, 11434
 print_info "Checking and freeing required ports: 3000, 8000, 8001, 8008, 11434"
 PORTS=(3000 8000 8001 8008 11434)
@@ -150,15 +156,24 @@ if [ "$PUBLIC_IP" = "YOUR_VPS_IP" ]; then
 fi
 
 echo ""
-echo -e "\e[1;36m#2) Downloading the Code\e[0m"
+echo -e "\e[1;36m#2) Downloading and Running the Code\e[0m"
 echo ""
-echo "To download the code, simply clone the repository from your home directory:"
+echo "To download and run the code:"
 echo ""
 echo "cd ~"
 echo "git clone https://github.com/gensyn-ai/codeassist.git"
 echo "cd codeassist"
 echo "source ~/.bashrc  # Update PATH for UV if needed"
 echo "uv run run.py"
+echo ""
+echo "If you encounter issues (e.g., unhealthy containers), run these cleanup commands:"
+echo ""
+echo "docker stop \$(docker ps -q --filter name=codeassist)  # Stop all codeassist containers"
+echo "docker rm \$(docker ps -a -q --filter name=codeassist)  # Remove them"
+echo "sudo systemctl restart docker  # Restart Docker daemon"
+echo "sudo lsof -ti:8000 | xargs sudo kill -9  # Free port 8000 if occupied"
+echo ""
+echo "Then retry: uv run run.py"
 echo ""
 echo "If you run it on a VPS, you need to run SSH from your local PC:"
 echo ""
