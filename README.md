@@ -125,7 +125,6 @@ https://huggingface.co/settings/tokens
 cd 
 rm -r JoinSwarm_Gensyn
 rm -r codeassist
-screen -X Codeassist -S quit
 
 git clone https://github.com/cryptoneth/JoinSwarm_Gensyn.git
 
@@ -133,14 +132,15 @@ cd JoinSwarm_Gensyn
 
 chmod +x install-codeassist.sh
 ./install-codeassist.sh
-```
-
-now head to screen and wait till installation proccess finish.
 
 ```
-screen -r Codeassist
+after dependencies installed succesfully 
+
+To download the code, simply clone the repository:
+
 ```
-```
+
+git clone https://github.com/gensyn-ai/codeassist.git
 cd codeassist
 uv run run.py
 
