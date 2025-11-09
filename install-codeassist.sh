@@ -40,6 +40,19 @@ command_exists() {
 
 print_info "Starting CodeAssist dependency installation..."
 
+# Clean up existing Gensyn/CodeAssist containers
+print_info "Cleaning up existing Gensyn/CodeAssist containers..."
+if command_exists docker; then
+    docker stop $(docker ps --filter "name=codeassist" -q) 2>/dev/null || true
+    docker rm $(docker ps -a --filter "name=codeassist" -q) 2>/dev/null || true
+    docker stop $(docker ps --filter "name=codeassist-ollama" -q) 2>/dev/null || true
+    docker rm $(docker ps -a --filter "name=codeassist-ollama" -q) 2>/dev/null || true
+    docker system prune -f 2>/dev/null || true
+    print_success "Gensyn/CodeAssist containers cleaned up."
+else
+    print_info "Docker not installed yet, skipping container cleanup."
+fi
+
 # Update system packages
 print_info "Updating system packages..."
 sudo apt update && sudo apt upgrade -y
@@ -50,19 +63,37 @@ sudo apt install -y screen curl iptables build-essential git wget lz4 jq make gc
 
 # Install Node.js
 print_info "Installing Node.js 22.x..."
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
-sudo apt install -y nodejs
+if command_exists node; then
+    print_success "Node.js is already installed: $(node --version)"
+else
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - >/dev/null 2>&1
+    sudo apt install -y nodejs >/dev/null 2>&1
+    print_success "Node.js installed: $(node --version)"
+fi
 
 # Install Yarn
 print_info "Installing Yarn..."
-curl -o- -L https://yarnpkg.com/install.sh | bash
-export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
-source ~/.bashrc
+if command_exists yarn; then
+    print_success "Yarn is already installed: $(yarn --version)"
+else
+    if [ -d "$HOME/.yarn" ]; then
+        rm -rf "$HOME/.yarn"
+    fi
+    curl -o- -L https://yarnpkg.com/install.sh | bash >/dev/null 2>&1
+    export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+    source ~/.bashrc >/dev/null 2>&1
+    print_success "Yarn installed: $(yarn --version)"
+fi
 
 # Install UV
 print_info "Installing UV (Python package manager)..."
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source $HOME/.local/bin/env
+if command_exists uv; then
+    print_success "UV is already installed: $(uv --version)"
+else
+    curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1
+    source $HOME/.local/bin/env >/dev/null 2>&1
+    print_success "UV installed: $(uv --version)"
+fi
 
 # Handle Docker installation
 print_info "Checking Docker installation..."
@@ -70,22 +101,13 @@ if command_exists docker; then
     print_warning "Docker is already installed on this system."
 else
     print_info "Installing Docker..."
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
-    sudo usermod -aG docker $USER
-    sudo systemctl enable docker
-    sudo systemctl start docker
+    curl -fsSL https://get.docker.com -o get-docker.sh >/dev/null 2>&1
+    sudo sh get-docker.sh >/dev/null 2>&1
+    sudo usermod -aG docker $USER >/dev/null 2>&1
+    sudo systemctl enable docker >/dev/null 2>&1
+    sudo systemctl start docker >/dev/null 2>&1
     print_success "Docker installation completed."
 fi
-
-# Clean up existing Gensyn/CodeAssist containers (now after Docker is available)
-print_info "Cleaning up existing Gensyn/CodeAssist containers..."
-docker stop $(docker ps --filter "name=codeassist" -q) 2>/dev/null || true
-docker rm $(docker ps -a --filter "name=codeassist" -q) 2>/dev/null || true
-docker stop $(docker ps --filter "name=codeassist-ollama" -q) 2>/dev/null || true
-docker rm $(docker ps -a --filter "name=codeassist-ollama" -q) 2>/dev/null || true
-docker system prune -f 2>/dev/null || true
-print_success "Gensyn/CodeAssist containers cleaned up."
 
 # Free up required ports: 3000, 8000, 8001, 8008, 11434
 print_info "Checking and freeing required ports: 3000, 8000, 8001, 8008, 11434"
@@ -109,10 +131,12 @@ done
 
 # Verify installations
 print_info "Verifying installations..."
-echo "Node.js: $(node --version 2>/dev/null || echo 'Not installed')"
-echo "Yarn: $(yarn --version 2>/dev/null || echo 'Not installed')"
-echo "Docker: $(docker --version 2>/dev/null || echo 'Not installed')"
-echo "UV: $(uv --version 2>/dev/null || echo 'Not installed')"
+echo ""
+print_success "Node.js: $(node --version 2>/dev/null || echo 'Not installed')"
+print_success "Yarn: $(yarn --version 2>/dev/null || echo 'Not installed')"
+print_success "Docker: $(docker --version 2>/dev/null | head -n1 || echo 'Not installed')"
+print_success "UV: $(uv --version 2>/dev/null || echo 'Not installed')"
+echo ""
 
 print_success "Dependencies installation completed!"
 
@@ -124,16 +148,21 @@ if [ "$PUBLIC_IP" = "YOUR_VPS_IP" ]; then
 fi
 
 echo ""
-echo -e "\e[1;36m#2) Downloading the Code\e[0m"
-echo -e "\e[1;34mTo download the code, simply clone the repository:\e[0m"
+print_info "#2) Downloading the Code"
 echo ""
-echo -e "\e[1;32mgit clone https://github.com/gensyn-ai/codeassist.git\e[0m"
-echo -e "\e[1;32mcd codeassist\e[0m"
-echo -e "\e[1;32muv run run.py\e[0m"
+print_info "To download the code, simply clone the repository from your home directory:"
 echo ""
-echo -e "\e[1;34mIf you run it on a VPS you need to run SSH from your local PC\e[0m"
-echo -e "\e[1;32mssh -N -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$PUBLIC_IP\e[0m"
+print_success "cd ~"
+print_success "git clone https://github.com/gensyn-ai/codeassist.git"
+print_success "cd codeassist"
+print_success "uv run run.py"
 echo ""
-echo -e "\e[1;34mAfter establishing the SSH tunnel, go to \e[1;32mhttp://localhost:3000\e[0m\e[1;34m in your browser and use CodeAssist to register solutions for problems.\e[0m"
+print_info "If you run it on a VPS, you need to run SSH from your local PC:"
 echo ""
-echo -e "\e[1;34mAfter solving the problem, go back to the terminal, press Ctrl+C, and wait for it to finish pushing the data\e[0m"
+print_success "ssh -N -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$PUBLIC_IP"
+echo ""
+print_info "After establishing the SSH tunnel, go to http://localhost:3000 in your browser and use CodeAssist to register solutions for problems."
+echo ""
+print_info "After solving the problem, go back to the terminal, press Ctrl+C, and wait for it to finish pushing the data."
+echo ""
+print_success "Setup complete! 🚀"
