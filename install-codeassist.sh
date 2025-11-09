@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# CodeAssist Installation Script
+# CodeAssist Dependency Installation Script
 echo -e "\e[33m"
 cat << "EOF"
 _________                        __
@@ -38,55 +38,23 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to clean up Docker containers and screen session
-cleanup_environment() {
-    print_info "Cleaning up environment..."
+print_info "Starting CodeAssist dependency installation..."
 
-    # Stop all Docker containers
-    docker stop $(docker ps -aq) 2>/dev/null || true
-    docker system prune -af 2>/dev/null || true
-
-    # Kill existing screen session
-    screen -XS Codeassist quit 2>/dev/null || true
-
-    print_success "Environment cleanup completed."
-}
-
-# Function to get Hugging Face token
-get_huggingface_token() {
-    echo -e "\n\e[1;36mHugging Face Token Required\e[0m"
-    echo "This token is required for accessing AI models through CodeAssist."
-    echo "You can get your token from: https://huggingface.co/settings/tokens"
-    echo ""
-
-    while true; do
-        read -p "Please enter your Hugging Face token: " HF_TOKEN
-        if [ ! -z "$HF_TOKEN" ]; then
-            echo "Token received. You can also set it as environment variable HF_TOKEN for future runs."
-            break
-        else
-            print_error "Token cannot be empty. Please try again."
-        fi
-    done
-}
-
-print_info "Starting CodeAssist installation outside screen session..."
-
-# Get Hugging Face token first
-echo -e "\n\e[1;36mHugging Face Token Required\e[0m"
-echo "This token is required for accessing AI models through CodeAssist."
-echo "You can get your token from: https://huggingface.co/settings/tokens"
-echo ""
-
-while true; do
-    read -p "Please enter your Hugging Face token: " HF_TOKEN
-    if [ ! -z "$HF_TOKEN" ]; then
-        echo "Token received. You can also set it as environment variable HF_TOKEN for future runs."
-        break
-    else
-        echo -e "\e[1;31m[ERROR]\e[0m Token cannot be empty. Please try again."
-    fi
-done
+# Clean up existing Gensyn/CodeAssist containers
+print_info "Cleaning up existing Gensyn/CodeAssist containers..."
+if command_exists docker; then
+    # Stop and remove containers with names containing 'codeassist'
+    docker stop $(docker ps --filter "name=codeassist" -q) 2>/dev/null || true
+    docker rm $(docker ps -a --filter "name=codeassist" -q) 2>/dev/null || true
+    # Also for ollama if named codeassist-ollama
+    docker stop $(docker ps --filter "name=codeassist-ollama" -q) 2>/dev/null || true
+    docker rm $(docker ps -a --filter "name=codeassist-ollama" -q) 2>/dev/null || true
+    # Prune system
+    docker system prune -f 2>/dev/null || true
+    print_success "Gensyn/CodeAssist containers cleaned up."
+else
+    print_info "Docker not installed yet, skipping container cleanup."
+fi
 
 # Update system packages
 print_info "Updating system packages..."
@@ -94,7 +62,7 @@ sudo apt update && sudo apt upgrade -y
 
 # Install system dependencies
 print_info "Installing system dependencies..."
-sudo apt install -y screen curl iptables build-essential git wget lz4 jq make gcc nano automake autoconf tmux htop nvme-cli libgbm1 pkg-config libssl-dev libleveldb-dev tar clang bsdmainutils ncdu unzip python3 python3-pip python3-venv python3-dev
+sudo apt install -y screen curl iptables build-essential git wget lz4 jq make gcc nano automake autoconf tmux htop nvme-cli libgbm1 pkg-config libssl-dev libleveldb-dev tar clang bsdmainutils ncdu unzip python3 python3-pip python3-venv python3-dev lsof
 
 # Install Node.js
 print_info "Installing Node.js 22.x..."
@@ -116,9 +84,6 @@ source $HOME/.local/bin/env
 print_info "Checking Docker installation..."
 if command_exists docker; then
     print_warning "Docker is already installed on this system."
-    print_info "Cleaning up Docker containers..."
-    docker stop $(docker ps -aq) 2>/dev/null || true
-    docker system prune -af 2>/dev/null || true
 else
     print_info "Installing Docker..."
     curl -fsSL https://get.docker.com -o get-docker.sh
@@ -129,6 +94,24 @@ else
     print_success "Docker installation completed."
 fi
 
+# Free up required ports: 3000, 8000, 8001, 8008, 11434
+print_info "Checking and freeing required ports: 3000, 8000, 8001, 8008, 11434"
+PORTS=(3000 8000 8001 8008 11434)
+for port in "${PORTS[@]}"; do
+    pids=$(sudo lsof -ti:$port 2>/dev/null)
+    if [ ! -z "$pids" ]; then
+        print_warning "Port $port in use by PID(s): $pids. Stopping processes..."
+        echo $pids | xargs sudo kill -9 2>/dev/null || true
+        sleep 2  # Give time to release
+    fi
+    # Double-check
+    if [ -z "$(sudo lsof -ti:$port 2>/dev/null)" ]; then
+        print_success "Port $port is now free."
+    else
+        print_warning "Port $port could not be fully freed. Manual intervention may be needed."
+    fi
+done
+
 # Verify installations
 print_info "Verifying installations..."
 echo "Node.js: $(node --version 2>/dev/null || echo 'Not installed')"
@@ -136,42 +119,22 @@ echo "Yarn: $(yarn --version 2>/dev/null || echo 'Not installed')"
 echo "Docker: $(docker --version 2>/dev/null || echo 'Not installed')"
 echo "UV: $(uv --version 2>/dev/null || echo 'Not installed')"
 
-# Handle codeassist directory
-if [ -d "codeassist" ]; then
-    print_info "Existing codeassist directory found, updating..."
-    cd codeassist
-    git pull
-    cd ..
-else
-    print_info "Cloning fresh codeassist repository..."
-    git clone https://github.com/gensyn-ai/codeassist.git
-fi
+print_success "Dependencies installation completed!"
 
-# Clean up environment
-print_info "Cleaning up environment..."
-docker stop $(docker ps -aq) 2>/dev/null || true
-docker system prune -af 2>/dev/null || true
-screen -XS Codeassist quit 2>/dev/null || true
+# Get public IP
+PUBLIC_IP=$(curl -s ifconfig.me)
 
-print_success "Installation completed! Creating permanent screen session..."
-
-# Create simple screen session
-print_info "Creating screen session 'Codeassist'..."
-screen -dmS Codeassist
-
-print_success "Screen session 'Codeassist' created!"
 echo ""
-echo -e "\e[1;32m=== READY ===\e[0m"
+echo -e "\e[1;36m#2) Downloading the Code\e[0m"
+echo -e "\e[1;34mTo download the code, simply clone the repository:\e[0m"
 echo ""
-echo -e "\e[1;36mSCREEN:\e[0m"
-echo "• Attach: screen -r Codeassist"
-echo "• Detach: Ctrl+A then D"
+echo -e "\e[1;32mgit clone https://github.com/gensyn-ai/codeassist.git\e[0m"
+echo -e "\e[1;32mcd codeassist\e[0m"
+echo -e "\e[1;32muv run run.py\e[0m"
 echo ""
-echo -e "\e[1;36mIN SCREEN:\e[0m"
-echo "• cd codeassist"
-echo "• uv run run.py"
+echo -e "\e[1;34mIf you run it on a VPS you need to run SSH from your local PC\e[0m"
+echo -e "\e[1;32mssh -N -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@$PUBLIC_IP\e[0m"
 echo ""
-echo -e "\e[1;36mSSH TUNNEL:\e[0m"
-echo "ssh -N -L 3000:localhost:3000 -L 8000:localhost:8000 -L 8008:localhost:8008 root@YOUR_VPS_IP"
+echo -e "\e[1;34mAfter establishing the SSH tunnel, go to \e[1;32mhttp://localhost:3000\e[0m\e[1;34m in your browser and use CodeAssist to register solutions for problems.\e[0m"
 echo ""
-echo -e "\e[1;32m✅ Ready to use!\e[0m"
+echo -e "\e[1;34mAfter solving the problem, go back to the terminal, press Ctrl+C, and wait for it to finish pushing the data\e[0m"
