@@ -40,22 +40,6 @@ command_exists() {
 
 print_info "Starting CodeAssist dependency installation..."
 
-# Clean up existing Gensyn/CodeAssist containers
-print_info "Cleaning up existing Gensyn/CodeAssist containers..."
-if command_exists docker; then
-    # Stop and remove containers with names containing 'codeassist'
-    docker stop $(docker ps --filter "name=codeassist" -q) 2>/dev/null || true
-    docker rm $(docker ps -a --filter "name=codeassist" -q) 2>/dev/null || true
-    # Also for ollama if named codeassist-ollama
-    docker stop $(docker ps --filter "name=codeassist-ollama" -q) 2>/dev/null || true
-    docker rm $(docker ps -a --filter "name=codeassist-ollama" -q) 2>/dev/null || true
-    # Prune system
-    docker system prune -f 2>/dev/null || true
-    print_success "Gensyn/CodeAssist containers cleaned up."
-else
-    print_info "Docker not installed yet, skipping container cleanup."
-fi
-
 # Update system packages
 print_info "Updating system packages..."
 sudo apt update && sudo apt upgrade -y
@@ -94,21 +78,32 @@ else
     print_success "Docker installation completed."
 fi
 
+# Clean up existing Gensyn/CodeAssist containers (now after Docker is available)
+print_info "Cleaning up existing Gensyn/CodeAssist containers..."
+docker stop $(docker ps --filter "name=codeassist" -q) 2>/dev/null || true
+docker rm $(docker ps -a --filter "name=codeassist" -q) 2>/dev/null || true
+docker stop $(docker ps --filter "name=codeassist-ollama" -q) 2>/dev/null || true
+docker rm $(docker ps -a --filter "name=codeassist-ollama" -q) 2>/dev/null || true
+docker system prune -f 2>/dev/null || true
+print_success "Gensyn/CodeAssist containers cleaned up."
+
 # Free up required ports: 3000, 8000, 8001, 8008, 11434
 print_info "Checking and freeing required ports: 3000, 8000, 8001, 8008, 11434"
 PORTS=(3000 8000 8001 8008 11434)
 for port in "${PORTS[@]}"; do
-    pids=$(sudo lsof -ti:$port 2>/dev/null)
+    print_info "Checking port $port..."
+    pids=$(sudo lsof -ti:$port 2>/dev/null || echo "")
     if [ ! -z "$pids" ]; then
         print_warning "Port $port in use by PID(s): $pids. Stopping processes..."
         echo $pids | xargs sudo kill -9 2>/dev/null || true
         sleep 2  # Give time to release
     fi
     # Double-check
-    if [ -z "$(sudo lsof -ti:$port 2>/dev/null)" ]; then
+    remaining_pids=$(sudo lsof -ti:$port 2>/dev/null || echo "")
+    if [ -z "$remaining_pids" ]; then
         print_success "Port $port is now free."
     else
-        print_warning "Port $port could not be fully freed. Manual intervention may be needed."
+        print_warning "Port $port could not be fully freed (remaining PIDs: $remaining_pids). Manual intervention may be needed."
     fi
 done
 
@@ -121,8 +116,12 @@ echo "UV: $(uv --version 2>/dev/null || echo 'Not installed')"
 
 print_success "Dependencies installation completed!"
 
-# Get public IP
-PUBLIC_IP=$(curl -s ifconfig.me)
+# Get public IP with timeout to avoid hanging
+print_info "Detecting public IP..."
+PUBLIC_IP=$(curl -s --max-time 10 ifconfig.me || echo "YOUR_VPS_IP")
+if [ "$PUBLIC_IP" = "YOUR_VPS_IP" ]; then
+    print_warning "Could not detect public IP automatically. Please replace YOUR_VPS_IP in the SSH command."
+fi
 
 echo ""
 echo -e "\e[1;36m#2) Downloading the Code\e[0m"
