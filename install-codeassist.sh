@@ -81,6 +81,7 @@ else
     fi
     curl -o- -L https://yarnpkg.com/install.sh | bash >/dev/null 2>&1
     export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+    echo 'export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"' >> ~/.bashrc
     source ~/.bashrc >/dev/null 2>&1
     print_success "Yarn installed: $(yarn --version)"
 fi
@@ -91,6 +92,7 @@ if command_exists uv; then
     print_success "UV is already installed: $(uv --version)"
 else
     curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1
+    echo 'source $HOME/.local/bin/env' >> ~/.bashrc
     source $HOME/.local/bin/env >/dev/null 2>&1
     print_success "UV installed: $(uv --version)"
 fi
@@ -138,7 +140,7 @@ print_success "Docker: $(docker --version 2>/dev/null | head -n1 || echo 'Not in
 print_success "UV: $(uv --version 2>/dev/null || echo 'Not installed')"
 echo ""
 
-print_success "Dependencies installation completed!"
+print_success "Dependencies installation completed! Run 'source ~/.bashrc' if needed to update PATH."
 
 # Get public IP with timeout to avoid hanging
 print_info "Detecting public IP..."
@@ -155,6 +157,7 @@ echo ""
 echo "cd ~"
 echo "git clone https://github.com/gensyn-ai/codeassist.git"
 echo "cd codeassist"
+echo "source ~/.bashrc  # Update PATH for UV if needed"
 echo "uv run run.py"
 echo ""
 echo "If you run it on a VPS, you need to run SSH from your local PC:"
